@@ -19,6 +19,12 @@ interface UserDetailsDisplayProps {
 }
 
 const UserDetailsDisplay = ({ data, isProcessing }: UserDetailsDisplayProps) => {
+  if (isProcessing) {
+    return (
+      <UserDetailsSkeleton />
+    )
+  }
+
   if (!data) {
     return (
       <Card className="max-w-md mx-auto p-4 text-center space-y-4 shadow-none border-none">
@@ -35,13 +41,7 @@ const UserDetailsDisplay = ({ data, isProcessing }: UserDetailsDisplayProps) => 
       </Card>
     );
   }
-
-
-  if (isProcessing) { 
-    return (
-      <UserDetailsSkeleton />
-    )
-  }
+ 
 
   return (
     <Card className="max-w-md mx-auto p-4 space-y-4 shadow-none border-none">
