@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import router from "./routes/router.js";
 import cors from "cors";
 import { errorHandler } from "./middleware/error.middleware.js";
+import morgan from "morgan";
 
 dotenv.config();
 
@@ -11,6 +12,7 @@ const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
+app.use(morgan("tiny"));
 app.use("/api", router);
 app.use(errorHandler);
 
