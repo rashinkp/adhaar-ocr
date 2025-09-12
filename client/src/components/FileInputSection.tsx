@@ -1,11 +1,9 @@
 import FileUpload from "@/components/FileUpload";
 import { Button } from "@/components/ui/button";
+import type { FileInputSectionProps } from "@/types/file";
 import { useState } from "react";
 
-interface FileInputSectionProps {
-  isProcessing: boolean;
-  onStartProcessing: (frontFile: File, backFile: File) => void;
-}
+
 
 const FileInputSection = ({ isProcessing, onStartProcessing }: FileInputSectionProps) => {
   const [file1, setFile1] = useState<File | null>(null);

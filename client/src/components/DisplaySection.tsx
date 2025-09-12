@@ -4,19 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { User, Calendar, CreditCard, Home, AlertCircle } from "lucide-react";
 import UserDetailsSkeleton from "./skeleton/UserDetailsSkeleton";
+import type { UserDetailsDisplayProps } from "@/types/user";
 
-interface UserDetails {
-  name: string;
-  gender: string;
-  dob: string;
-  aadhaarNo: string;
-  address: string;
-}
 
-interface UserDetailsDisplayProps {
-  data?: UserDetails | null;
-  isProcessing?: boolean;
-}
 
 const UserDetailsDisplay = ({ data, isProcessing }: UserDetailsDisplayProps) => {
   if (isProcessing) {
@@ -41,6 +31,8 @@ const UserDetailsDisplay = ({ data, isProcessing }: UserDetailsDisplayProps) => 
       </Card>
     );
   }
+
+  console.log("Displaying data:", data);
  
 
   return (
@@ -84,7 +76,7 @@ const UserDetailsDisplay = ({ data, isProcessing }: UserDetailsDisplayProps) => 
           <CreditCard className="w-5 h-5 text-gray-500" />
           <div>
             <span className="font-medium text-gray-700">Aadhaar No:</span>{" "}
-            <span className="text-gray-900">{data.aadhaarNo}</span>
+            <span className="text-gray-900">{data.aadhaarNumber}</span>
           </div>
         </div>
 

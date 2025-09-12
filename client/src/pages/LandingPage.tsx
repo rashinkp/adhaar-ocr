@@ -7,31 +7,58 @@ import UserDetailsDisplay from "@/components/DisplaySection";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
-import { uploadAadhaarImages } from "@/services/ocrService";
+import { searchAadhaar, uploadAadhaarImages } from "@/services/ocrService";
+import type { AadhaarData } from "@/types/adhaar";
 
 
 const LandingPage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [aadhaarData, setAadhaarData] = useState<AadhaarData | null>(null);
 
-  const startProcessing = async (frontFile: File, backFile: File) => {
-    setIsProcessing(true);
+const startProcessing = async (frontFile: File, backFile: File) => {
+  setIsProcessing(true);
 
-    try {
-      const formData = new FormData();
-      formData.append("frontFile", frontFile);
-      formData.append("backFile", backFile);
-      const response = await uploadAadhaarImages(formData);
-      alert(`OCR Result:\n${JSON.stringify(response.data, null, 2)}`);
-    } catch (error:unknown) {
-        if (error instanceof Error) {
-          alert(`Upload failed: ${error.message}`);
-        } else {
-          alert("Server error");
-        }
-    } finally {
-      setIsProcessing(false);
+  try {
+    const formData = new FormData();
+    formData.append("frontFile", frontFile);
+    formData.append("backFile", backFile);
+
+    const response = await uploadAadhaarImages(formData);
+    const data = response.data as AadhaarData;
+
+    setAadhaarData(data);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      alert(`Upload failed: ${error.message}`);
+    } else {
+      alert("Server error");
     }
-  };
+  } finally {
+    setIsProcessing(false);
+  }
+};
+
+const handleSubmit = async (aadhaar: string, dob: Date) => {
+  setIsProcessing(true);
+
+  try {
+    // Convert Date to string in 'YYYY-MM-DD' format
+    const dobString = dob.toISOString().split('T')[0];
+    const response = await searchAadhaar(aadhaar, dobString);
+    const data = response.data as AadhaarData;
+
+    setAadhaarData(data);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      alert(`Error: ${error.message}`);
+    } else {
+      alert("Something went wrong");
+    }
+  } finally {
+    setIsProcessing(false);
+  }
+};
+
 
   return (
     <div className="max-w-6xl mx-auto p-6 md:p-8">
@@ -66,7 +93,7 @@ const LandingPage = () => {
               </TabsContent>
 
               <TabsContent value="number-input" className="min-h-[220px]">
-                <NumberInputSection />
+                <NumberInputSection onSubmit={handleSubmit} isSubmitting={isProcessing} />
               </TabsContent>
             </Tabs>
           </CardContent>
@@ -77,7 +104,7 @@ const LandingPage = () => {
 
         {/* Right: Results */}
         <div className="w-full lg:sticky lg:top-6">
-          <UserDetailsDisplay isProcessing={isProcessing} />
+          <UserDetailsDisplay isProcessing={isProcessing} data={aadhaarData} />
         </div>
 
         {/* Horizontal separator for small screens */}
