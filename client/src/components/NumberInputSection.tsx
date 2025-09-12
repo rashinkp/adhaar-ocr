@@ -11,22 +11,29 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { format } from "date-fns";
+import { searchAadhaar } from "@/services/ocrService";
 
 const NumberInputSection = () => {
   const [aadhaar, setAadhaar] = useState<string>("");
   const [dob, setDob] = useState<Date | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    setTimeout(() => {
+    try {
+      const response = await searchAadhaar(aadhaar, format(dob!, "yyyy-MM-dd"));
+      alert(`Aadhaar Data:\n${JSON.stringify(response.data, null, 2)}`);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        alert(`Error: ${error.message}`);
+      } else {
+        alert("Something went wrong");
+      }
+    } finally {
       setIsSubmitting(false);
-      alert(
-        `Aadhaar: ${aadhaar}\nDOB: ${dob ? format(dob, "yyyy-MM-dd") : ""}`
-      );
-    }, 2000);
+    }
   };
 
   return (

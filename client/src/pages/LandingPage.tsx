@@ -7,29 +7,41 @@ import UserDetailsDisplay from "@/components/DisplaySection";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
+import { uploadAadhaarImages } from "@/services/ocrService";
 
-const sampleData = {
-  name: "John Doe",
-  gender: "Male",
-  dob: "1990-05-15",
-  aadhaarNo: "1234 5678 9012",
-  address: "123 Main Street, City, Country",
-};
 
 const LandingPage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const startProcessing = () => {
+  const startProcessing = async (frontFile: File, backFile: File) => {
     setIsProcessing(true);
-    setTimeout(() => setIsProcessing(false), 2000);
+
+    try {
+      const formData = new FormData();
+      formData.append("frontFile", frontFile);
+      formData.append("backFile", backFile);
+      const response = await uploadAadhaarImages(formData);
+      alert(`OCR Result:\n${JSON.stringify(response.data, null, 2)}`);
+    } catch (error:unknown) {
+        if (error instanceof Error) {
+          alert(`Upload failed: ${error.message}`);
+        } else {
+          alert("Server error");
+        }
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
     <div className="max-w-6xl mx-auto p-6 md:p-8">
       <div className="space-y-2 mb-4">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">QuickAadhaar</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+          QuickAadhaar
+        </h1>
         <p className="text-sm md:text-base text-muted-foreground">
-          Upload Aadhaar images or enter Aadhaar number with DOB to quickly extract and view details.
+          Upload Aadhaar images or enter Aadhaar number with DOB to quickly
+          extract and view details.
         </p>
       </div>
       <Separator className="mb-6" />
@@ -47,7 +59,10 @@ const LandingPage = () => {
               </TabsList>
 
               <TabsContent value="file-upload" className="min-h-[220px]">
-                <FileInputSection isProcessing={isProcessing} onStartProcessing={startProcessing} />
+                <FileInputSection
+                  isProcessing={isProcessing}
+                  onStartProcessing={startProcessing}
+                />
               </TabsContent>
 
               <TabsContent value="number-input" className="min-h-[220px]">
@@ -62,7 +77,7 @@ const LandingPage = () => {
 
         {/* Right: Results */}
         <div className="w-full lg:sticky lg:top-6">
-          <UserDetailsDisplay data={sampleData} isProcessing={isProcessing} />
+          <UserDetailsDisplay isProcessing={isProcessing} />
         </div>
 
         {/* Horizontal separator for small screens */}

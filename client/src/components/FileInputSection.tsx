@@ -4,7 +4,7 @@ import { useState } from "react";
 
 interface FileInputSectionProps {
   isProcessing: boolean;
-  onStartProcessing: () => void;
+  onStartProcessing: (frontFile: File, backFile: File) => void;
 }
 
 const FileInputSection = ({ isProcessing, onStartProcessing }: FileInputSectionProps) => {
@@ -12,7 +12,9 @@ const FileInputSection = ({ isProcessing, onStartProcessing }: FileInputSectionP
   const [file2, setFile2] = useState<File | null>(null);
 
   const onClick = () => {
-    onStartProcessing();
+    if (file1 && file2) {
+      onStartProcessing(file1, file2);
+    }
   };
 
   const isButtonDisabled = isProcessing || !file1 || !file2;
