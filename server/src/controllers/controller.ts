@@ -1,18 +1,45 @@
 import type { Request, Response } from "express"
-
+import { Tesseract } from "tesseract.ts";
+import sharp from "sharp";
 
 export const processOcr = async (req : Request, res:Response) => {
       try {
-        console.log("Processing Aadhaar images");
+       if (
+         !req.files ||
+         Array.isArray(req.files) ||
+         !(req.files as { [fieldname: string]: Express.Multer.File[] }).frontFile ||
+         !(req.files as { [fieldname: string]: Express.Multer.File[] }).backFile
+       ) {
+         return res
+           .status(400)
+           .json({ message: "Both front and back images are required" });
+       }
 
-        const extractedData = {
-          aadhaarNumber: "1234-5678-9012",
-          name: "John Doe",
-          dob: "1990-01-01",
-          address: "123, Example Street, City",
-        };
+       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
-        res.status(200).json({ success: true, data: extractedData });
+       if (!files.frontFile || !files.backFile || !files.frontFile[0] || !files.backFile[0]) {
+         return res.status(400).json({ message: "Both front and back images are required" });
+       }
+
+       const frontBuffer = files.frontFile[0].buffer;
+       const backBuffer = files.backFile[0].buffer;
+
+       // Normalize to PNG to avoid Leptonica colormap/bpp errors
+       const [frontPng, backPng] = await Promise.all([
+         sharp(frontBuffer).toFormat("png").toBuffer(),
+         sharp(backBuffer).toFormat("png").toBuffer(),
+       ]);
+
+       // OCR on normalized PNG buffers
+       const [frontResult, backResult] = await Promise.all([
+         Tesseract.recognize(frontPng, "eng"),
+         Tesseract.recognize(backPng, "eng"),
+       ]);
+
+       res.json({
+         frontText: frontResult.text,
+         backText: backResult.text,
+       });
       } catch (error) {
         console.error(error);
         res
