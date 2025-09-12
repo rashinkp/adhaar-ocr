@@ -1,6 +1,6 @@
 import express from 'express'
-import { findRecord, processOcr } from '../controllers/controller.js';
-import { upload } from '../middleware/multer.middleware.js';
+import { findRecord, processOcr } from '../controllers/ocr.controller.js';
+import { upload } from '../middleware/upload.middleware.js';
 
 
 const router = express.Router();

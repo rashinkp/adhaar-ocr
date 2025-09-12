@@ -1,6 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
-import router from "./routes/router.js";
+import router from "./routes/ocr.routes.js";
 import cors from "cors";
 import { errorHandler } from "./middleware/error.middleware.js";
 import morgan from "morgan";
