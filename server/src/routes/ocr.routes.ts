@@ -13,7 +13,7 @@ router.post(
   ]),
   processOcr
 );
-router.get('/search', findRecord)
+router.get('/search', findRecord);
 
 
 

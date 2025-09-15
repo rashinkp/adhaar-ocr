@@ -60,6 +60,24 @@ const NumberInputSection = ({
               value: /^\d{12}$/,
               message: "Aadhaar number must be exactly 12 digits",
             },
+            validate: {
+              notAllSame: (value) => {
+                const digits = value.split('');
+                const allSame = digits.every(digit => digit === digits[0]);
+                return !allSame || "Aadhaar number cannot have all identical digits";
+              },
+              notSequential: (value) => {
+                const digits = value.split('').map(Number);
+                let isSequential = true;
+                for (let i = 1; i < digits.length; i++) {
+                  if (digits[i] !== digits[i-1] + 1) {
+                    isSequential = false;
+                    break;
+                  }
+                }
+                return !isSequential || "Aadhaar number cannot be sequential (e.g., 123456789012)";
+              }
+            }
           })}
         />
         {errors.aadhaar && (

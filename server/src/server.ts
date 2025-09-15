@@ -2,13 +2,16 @@ import express from "express";
 import dotenv from "dotenv";
 import router from "./routes/ocr.routes.js";
 import cors from "cors";
-import { errorHandler } from "./middleware/error.middleware.js";
 import morgan from "morgan";
+import { errorHandler } from "./middleware/error.middleware.js";
+import { connectDB } from "./config/database.config.js";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+connectDB();
 
 app.use(cors());
 app.use(express.json());

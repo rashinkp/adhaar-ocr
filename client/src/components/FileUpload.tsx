@@ -12,40 +12,115 @@ interface FileUploadProps {
 
 const FileUpload = ({ file, setFile, disabled = false }: FileUploadProps) => {
   const [error, setError] = useState<string | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  const validateImage = (file: File): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      img.onload = () => {
+        if (ctx) {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+          
+          // Check image quality by analyzing pixel data
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const data = imageData.data;
+          
+          // Simple quality check - count non-white pixels
+          let nonWhitePixels = 0;
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            const alpha = data[i + 3];
+            
+            // Check if pixel is not white/transparent
+            if (alpha > 0 && !(r > 240 && g > 240 && b > 240)) {
+              nonWhitePixels++;
+            }
+          }
+          
+          // If less than 10% of pixels are non-white, image might be blank
+          const quality = nonWhitePixels / (canvas.width * canvas.height);
+          resolve(quality > 0.1);
+        } else {
+          resolve(false);
+        }
+      };
+      
+      img.onerror = () => resolve(false);
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (disabled) return;
 
       const selectedFile = e.target.files?.[0];
       if (!selectedFile) return;
 
+      setIsValidating(true);
+      setError(null);
+
       const validTypes = [
         "image/png",
         "image/jpeg",
-        "image/gif",
+        "image/jpg",
         "image/webp",
-        "application/pdf",
       ];
 
-      const maxSizeInBytes = 2 * 1024 * 1024; // 2MB
+      const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
+      const minSizeInBytes = 10 * 1024; // 10KB
 
+      // File type validation
       if (!validTypes.includes(selectedFile.type)) {
-        setError("Only images and PDF files are supported.");
+        setError("Only JPEG, PNG, and WebP images are supported. PDF files are not supported for OCR processing.");
         e.target.value = "";
+        setIsValidating(false);
         return;
       }
 
+      // File size validation
       if (selectedFile.size > maxSizeInBytes) {
-        setError("File size must be less than 2MB.");
+        setError("File size must be less than 5MB. Please compress your image or use a smaller file.");
         e.target.value = "";
+        setIsValidating(false);
+        return;
+      }
+
+      if (selectedFile.size < minSizeInBytes) {
+        setError("File size is too small. Please ensure the image is not corrupted.");
+        e.target.value = "";
+        setIsValidating(false);
+        return;
+      }
+
+      // Image quality validation
+      try {
+        const isValidImage = await validateImage(selectedFile);
+        if (!isValidImage) {
+          setError("Image appears to be blank or of very poor quality. Please upload a clear image of your Aadhaar card.");
+          e.target.value = "";
+          setIsValidating(false);
+          return;
+        }
+      } catch (error) {
+        setError("Unable to validate image. Please try a different file.");
+        e.target.value = "";
+        setIsValidating(false);
         return;
       }
 
       setFile(selectedFile);
-      setError(null); // Clear previous error
+      setError(null);
       e.target.value = ""; // Reset input so same file can be selected again
+      setIsValidating(false);
     },
     [disabled, setFile]
   );
@@ -105,15 +180,27 @@ const FileUpload = ({ file, setFile, disabled = false }: FileUploadProps) => {
           </>
         ) : (
           <div className="text-center flex flex-col items-center space-y-2">
-            <UploadCloud className="w-12 h-12 text-gray-400" />
+            {isValidating ? (
+              <div className="animate-spin">
+                <UploadCloud className="w-12 h-12 text-blue-400" />
+              </div>
+            ) : (
+              <UploadCloud className="w-12 h-12 text-gray-400" />
+            )}
             <div className="text-sm text-gray-600 dark:text-neutral-400">
-              Drop your file here or{" "}
-              <span className="font-semibold text-blue-600 hover:underline cursor-pointer">
-                browse
-              </span>
+              {isValidating ? (
+                "Validating image..."
+              ) : (
+                <>
+                  Drop your file here or{" "}
+                  <span className="font-semibold text-blue-600 hover:underline cursor-pointer">
+                    browse
+                  </span>
+                </>
+              )}
             </div>
             <p className="text-xs text-gray-400 dark:text-neutral-500">
-              Max file size: 2MB
+              Max file size: 5MB • JPEG, PNG, WebP
             </p>
           </div>
         )}

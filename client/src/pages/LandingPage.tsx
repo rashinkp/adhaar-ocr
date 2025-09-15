@@ -8,31 +8,44 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 import { searchAadhaar, uploadAadhaarImages } from "@/services/ocrService";
-import type { AadhaarData } from "@/types/adhaar";
+import type { AadhaarData, AadhaarResponse } from "@/types/adhaar";
 
 
 const LandingPage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [aadhaarData, setAadhaarData] = useState<AadhaarData | null>(null);
+  const [response, setResponse] = useState<AadhaarResponse | null>(null);
 
 const startProcessing = async (frontFile: File, backFile: File) => {
   setIsProcessing(true);
+  setResponse(null);
+  setAadhaarData(null);
 
   try {
     const formData = new FormData();
     formData.append("frontFile", frontFile);
     formData.append("backFile", backFile);
 
-    const response = await uploadAadhaarImages(formData);
-    const data = response.data as AadhaarData;
+    const apiResponse = await uploadAadhaarImages(formData);
+    const responseData = apiResponse as AadhaarResponse;
 
-    setAadhaarData(data);
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      alert(`Upload failed: ${error.message}`);
-    } else {
-      alert("Server error");
+    setResponse(responseData);
+
+    if (responseData.success && responseData.data) {
+      setAadhaarData(responseData.data);
     }
+  } catch (error: unknown) {
+    console.error("Upload error:", error);
+    
+    // Create error response
+    const errorResponse: AadhaarResponse = {
+      success: false,
+      message: "Upload failed",
+      errors: ["Failed to upload images"],
+      suggestions: ["Please check your internet connection and try again"]
+    };
+    
+    setResponse(errorResponse);
   } finally {
     setIsProcessing(false);
   }
@@ -40,23 +53,44 @@ const startProcessing = async (frontFile: File, backFile: File) => {
 
 const handleSubmit = async (aadhaar: string, dob: Date) => {
   setIsProcessing(true);
+  setResponse(null);
+  setAadhaarData(null);
 
   try {
     // Convert Date to string in 'YYYY-MM-DD' format
     const dobString = dob.toISOString().split('T')[0];
-    const response = await searchAadhaar(aadhaar, dobString);
-    const data = response.data as AadhaarData;
+    const apiResponse = await searchAadhaar(aadhaar, dobString);
+    const responseData = apiResponse as AadhaarResponse;
 
-    setAadhaarData(data);
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      alert(`Error: ${error.message}`);
-    } else {
-      alert("Something went wrong");
+    setResponse(responseData);
+
+    if (responseData.success && responseData.data) {
+      setAadhaarData(responseData.data);
     }
+  } catch (error: unknown) {
+    console.error("Search error:", error);
+    
+    // Create error response
+    const errorResponse: AadhaarResponse = {
+      success: false,
+      message: "Search failed",
+      errors: ["Failed to search for Aadhaar record"],
+      suggestions: ["Please check your internet connection and try again"]
+    };
+    
+    setResponse(errorResponse);
   } finally {
     setIsProcessing(false);
   }
+};
+
+const handleRetry = () => {
+  setResponse(null);
+  setAadhaarData(null);
+};
+
+const handleDismiss = () => {
+  setResponse(null);
 };
 
 
@@ -104,7 +138,13 @@ const handleSubmit = async (aadhaar: string, dob: Date) => {
 
         {/* Right: Results */}
         <div className="w-full lg:sticky lg:top-6">
-          <UserDetailsDisplay isProcessing={isProcessing} data={aadhaarData} />
+          <UserDetailsDisplay 
+            isProcessing={isProcessing} 
+            data={aadhaarData} 
+            response={response}
+            onRetry={handleRetry}
+            onDismiss={handleDismiss}
+          />
         </div>
 
         {/* Horizontal separator for small screens */}

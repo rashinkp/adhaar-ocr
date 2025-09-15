@@ -1,7 +1,6 @@
 import type { Request, Response } from "express";
-import { Tesseract } from "tesseract.ts";
-import sharp from "sharp";
 import { performOcrProcessing } from "../services/ocr.service.js";
+import { AadhaarModel } from "../models/Aadhaar.js";
 
 export const processOcr = async (req: Request, res: Response) => {
   try {
@@ -35,11 +34,40 @@ export const processOcr = async (req: Request, res: Response) => {
 
     const ocrResult = await performOcrProcessing(frontBuffer, backBuffer);
 
-    console.log(ocrResult);
+    const { parsed, frontText, backText } = ocrResult as unknown as {
+      parsed?: {
+        aadhaarNumber?: string;
+        dob?: string;
+        gender?: string;
+        name?: string;
+        address?: string;
+      };
+      frontText: string;
+      backText: string;
+    };
 
-    res.json({
-      ocrResult,
-    });
+    if (!parsed || !parsed.aadhaarNumber || !parsed.dob || !parsed.name || !parsed.address) {
+      return res.status(422).json({
+        message: "Parsed data incomplete; cannot store",
+        parsed: parsed || {},
+        ocrText: { frontText, backText },
+      });
+    }
+
+    // Upsert by aadhaarNumber to avoid duplicates
+    const saved = await AadhaarModel.findOneAndUpdate(
+      { aadhaarNumber: parsed.aadhaarNumber },
+      {
+        aadhaarNumber: parsed.aadhaarNumber,
+        name: parsed.name,
+        dob: parsed.dob,
+        address: parsed.address,
+        gender: parsed.gender || "",
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    res.json({ success: true, data: saved, ocrText: { frontText, backText }, parsed });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "OCR processing failed" });

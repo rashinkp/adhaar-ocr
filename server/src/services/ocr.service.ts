@@ -1,5 +1,6 @@
 import Tesseract from "tesseract.js";
 import sharp from "sharp";
+import { parseAadhaarText, parseAadhaarTextWithValidation, type ParsedAadhaar, type ParsedAadhaarWithValidation } from "./aadhaar.parser.js";
 
 export const performOcrProcessing = async (
   frontBuffer: Buffer,
@@ -17,8 +18,36 @@ export const performOcrProcessing = async (
     Tesseract.recognize(backPng, "eng"),
   ]);
 
+  const frontText = frontResult.text;
+  const backText = backResult.text;
+
+  const parsed: ParsedAadhaar = parseAadhaarText(frontText, backText);
+
   return {
-    frontText: frontResult.text,
-    backText: backResult.text,
+    frontText,
+    backText,
+    parsed,
   };
+};
+
+export const performOcrProcessingWithValidation = async (
+  frontBuffer: Buffer,
+  backBuffer: Buffer
+): Promise<ParsedAadhaarWithValidation> => {
+  // Normalize images to PNG
+  const [frontPng, backPng] = await Promise.all([
+    sharp(frontBuffer).toFormat("png").toBuffer(),
+    sharp(backBuffer).toFormat("png").toBuffer(),
+  ]);
+
+  // Perform OCR
+  const [frontResult, backResult] = await Promise.all([
+    Tesseract.recognize(frontPng, "eng"),
+    Tesseract.recognize(backPng, "eng"),
+  ]);
+
+  const frontText = frontResult.text;
+  const backText = backResult.text;
+
+  return parseAadhaarTextWithValidation(frontText, backText);
 };
