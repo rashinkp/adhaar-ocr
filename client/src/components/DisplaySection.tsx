@@ -15,17 +15,33 @@ const UserDetailsDisplay = ({ data, isProcessing, response, onRetry, onDismiss, 
     return <UserDetailsSkeleton />;
   }
 
-  // Show simple error state (no box)
+  // Show simple error state (no box, friendly copy)
   if (response && !response.success) {
-    const msg =
-      response.message === "Record not found"
-        ? "No record found for this Aadhaar number and DOB. Please scan and upload."
-        : response.message || "Something went wrong. Please try again.";
+    const isNotFound = response.message === "Record not found";
+    const title = isNotFound
+      ? "No matching record found"
+      : response.message || "We couldn’t complete your request";
+    const description = isNotFound
+      ? "We couldn’t find an Aadhaar record for the number and DOB you entered. Try scanning and uploading the card, or double‑check the details."
+      : (response.errors && response.errors.length > 0
+          ? response.errors[0]!
+          : "Please try again in a moment.");
 
     return (
-      <div className="max-w-md mx-auto p-4 text-center space-y-3">
-        <p className="text-red-600 text-sm">{msg}</p>
-        <div className="flex items-center justify-center gap-3 text-sm">
+      <div className="w-full mx-auto py-6 text-center space-y-3">
+        <div className="flex items-center justify-center gap-2">
+          <AlertCircle className="w-5 h-5 text-red-600" />
+          <h2 className="text-red-700 font-semibold text-base md:text-lg">{title}</h2>
+        </div>
+        <p className="text-gray-700 text-sm md:text-base max-w-lg mx-auto leading-relaxed">{description}</p>
+        {response.suggestions && response.suggestions.length > 0 && (
+          <ul className="text-gray-600 text-sm max-w-lg mx-auto list-disc list-inside space-y-1">
+            {response.suggestions.slice(0, 2).map((s, idx) => (
+              <li key={idx}>{s}</li>
+            ))}
+          </ul>
+        )}
+        <div className="flex items-center justify-center gap-4 text-sm md:text-base pt-1">
           {onRetry && (
             <button type="button" className="text-blue-600 underline" onClick={onRetry}>
               Try again
