@@ -6,7 +6,6 @@ export const performOcrProcessing = async (
   frontBuffer: Buffer,
   backBuffer: Buffer
 ) => {
-  // Normalize images to PNG
   const [frontPng, backPng] = await Promise.all([
     sharp(frontBuffer).toFormat("png").toBuffer(),
     sharp(backBuffer).toFormat("png").toBuffer(),
@@ -34,7 +33,6 @@ export const performOcrProcessingWithValidation = async (
   frontBuffer: Buffer,
   backBuffer: Buffer
 ): Promise<ParsedAadhaarWithValidation> => {
-  // Normalize images to PNG
   const [frontPng, backPng] = await Promise.all([
     sharp(frontBuffer).toFormat("png").toBuffer(),
     sharp(backBuffer).toFormat("png").toBuffer(),

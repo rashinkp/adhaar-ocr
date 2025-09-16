@@ -4,17 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { User, Calendar, CreditCard, Home, AlertCircle, CheckCircle } from "lucide-react";
 import ErrorDisplay from "./ErrorDisplay";
-import SuccessDisplay from "./SuccessDisplay";
-import LoadingDisplay from "./LoadingDisplay";
+import UserDetailsSkeleton from "./skeleton/UserDetailsSkeleton";
 import type { UserDetailsDisplayProps } from "@/types/user";
 import type { AadhaarData } from "@/types/adhaar";
 
 
 
-const UserDetailsDisplay = ({ data, isProcessing, response, onRetry, onDismiss }: UserDetailsDisplayProps) => {
-  // Show loading state
+const UserDetailsDisplay = ({ data, isProcessing, response, onRetry, onDismiss, onFetchByAadhaarDob }: UserDetailsDisplayProps) => {
+  // Show loading state (skeleton)
   if (isProcessing) {
-    return <LoadingDisplay stage="processing" message="Processing your Aadhaar card..." />;
+    return <UserDetailsSkeleton />;
   }
 
   // Show error state
@@ -32,14 +31,9 @@ const UserDetailsDisplay = ({ data, isProcessing, response, onRetry, onDismiss }
     );
   }
 
-  // Show success state with validation info
-  if (response && response.success && response.validation) {
-    return (
-      <div className="space-y-4">
-        <SuccessDisplay validation={response.validation} message="Aadhaar data extracted successfully!" />
-        {data && <UserDetailsCard data={data} />}
-      </div>
-    );
+  // On success, just show data card; toast is handled in submit/upload flows
+  if (response && response.success) {
+    return data ? <UserDetailsCard data={data} onFetch={onFetchByAadhaarDob} /> : null;
   }
 
   // Show empty state
@@ -61,10 +55,10 @@ const UserDetailsDisplay = ({ data, isProcessing, response, onRetry, onDismiss }
   }
 
   // Show data without validation info (fallback)
-  return <UserDetailsCard data={data} />;
+  return <UserDetailsCard data={data} onFetch={onFetchByAadhaarDob} />;
 };
 
-const UserDetailsCard = ({ data }: { data: AadhaarData }) => {
+const UserDetailsCard = ({ data, onFetch }: { data: AadhaarData; onFetch?: (aadhaar: string, dob: string) => void }) => {
 
   return (
     <Card className="max-w-md mx-auto p-4 space-y-4 shadow-none border-none">
@@ -100,7 +94,17 @@ const UserDetailsCard = ({ data }: { data: AadhaarData }) => {
           <Calendar className="w-5 h-5 text-gray-500" />
           <div className="flex-1">
             <span className="font-medium text-gray-700">DOB:</span>{" "}
-            <span className="text-gray-900">{data.dob}</span>
+            {onFetch ? (
+              <button
+                type="button"
+                className="text-blue-600 hover:underline"
+                onClick={() => onFetch(data.aadhaarNumber, data.dob.replace(/-/g, "/"))}
+              >
+                {data.dob}
+              </button>
+            ) : (
+              <span className="text-gray-900">{data.dob}</span>
+            )}
           </div>
         </div>
 
@@ -110,7 +114,17 @@ const UserDetailsCard = ({ data }: { data: AadhaarData }) => {
           <CreditCard className="w-5 h-5 text-gray-500" />
           <div className="flex-1">
             <span className="font-medium text-gray-700">Aadhaar No:</span>{" "}
-            <span className="text-gray-900 font-mono">{data.aadhaarNumber}</span>
+            {onFetch ? (
+              <button
+                type="button"
+                className="text-blue-600 font-mono hover:underline"
+                onClick={() => onFetch(data.aadhaarNumber, data.dob.replace(/-/g, "/"))}
+              >
+                {data.aadhaarNumber}
+              </button>
+            ) : (
+              <span className="text-gray-900 font-mono">{data.aadhaarNumber}</span>
+            )}
           </div>
         </div>
 
@@ -120,7 +134,7 @@ const UserDetailsCard = ({ data }: { data: AadhaarData }) => {
           <Home className="w-5 h-5 text-gray-500 mt-1" />
           <div className="flex-1">
             <span className="font-medium text-gray-700">Address:</span>{" "}
-            <span className="text-gray-900 text-sm leading-relaxed">{data.address}</span>
+            <span className="text-gray-900 text-sm leading-relaxed whitespace-pre-line">{data.address}</span>
           </div>
         </div>
       </CardContent>

@@ -52,7 +52,10 @@ const NumberInputSection = ({
         <Label htmlFor="aadhaar">Aadhaar Number</Label>
         <Input
           id="aadhaar"
-          type="number"
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]{12}"
+          maxLength={12}
           placeholder="Enter your 12-digit Aadhaar number"
           {...register("aadhaar", {
             required: "Aadhaar number is required",
@@ -113,8 +116,12 @@ const NumberInputSection = ({
               <PopoverContent className="w-auto p-0">
                 <Calendar
                   mode="single"
+                  captionLayout="dropdown"
+                  fromYear={1900}
+                  toYear={new Date().getFullYear()}
                   selected={field.value}
                   onSelect={handleSelect(field.onChange)}
+                  disabled={{ after: new Date() }}
                 />
               </PopoverContent>
             </Popover>

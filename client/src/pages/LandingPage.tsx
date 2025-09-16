@@ -6,9 +6,11 @@ import NumberInputSection from "@/components/NumberInputSection";
 import UserDetailsDisplay from "@/components/DisplaySection";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useState } from "react";
+import {  useState } from "react";
+import { format } from "date-fns";
 import { searchAadhaar, uploadAadhaarImages } from "@/services/ocrService";
 import type { AadhaarData, AadhaarResponse } from "@/types/adhaar";
+import { toast } from "sonner";
 
 
 const LandingPage = () => {
@@ -33,6 +35,7 @@ const startProcessing = async (frontFile: File, backFile: File) => {
 
     if (responseData.success && responseData.data) {
       setAadhaarData(responseData.data);
+      toast.success("Data extracted successfully");
     }
   } catch (error: unknown) {
     console.error("Upload error:", error);
@@ -46,6 +49,7 @@ const startProcessing = async (frontFile: File, backFile: File) => {
     };
     
     setResponse(errorResponse);
+    toast.error("Upload failed");
   } finally {
     setIsProcessing(false);
   }
@@ -57,8 +61,8 @@ const handleSubmit = async (aadhaar: string, dob: Date) => {
   setAadhaarData(null);
 
   try {
-    // Convert Date to string in 'YYYY-MM-DD' format
-    const dobString = dob.toISOString().split('T')[0];
+    // Convert Date to string in 'YYYY-MM-DD' format using date-fns to avoid timezone issues
+    const dobString = format(dob, "yyyy-MM-dd");
     const apiResponse = await searchAadhaar(aadhaar, dobString);
     const responseData = apiResponse as AadhaarResponse;
 
@@ -66,6 +70,7 @@ const handleSubmit = async (aadhaar: string, dob: Date) => {
 
     if (responseData.success && responseData.data) {
       setAadhaarData(responseData.data);
+      toast.success("Data extracted successfully");
     }
   } catch (error: unknown) {
     console.error("Search error:", error);
@@ -79,6 +84,7 @@ const handleSubmit = async (aadhaar: string, dob: Date) => {
     };
     
     setResponse(errorResponse);
+    toast.error("Search failed");
   } finally {
     setIsProcessing(false);
   }
@@ -91,6 +97,29 @@ const handleRetry = () => {
 
 const handleDismiss = () => {
   setResponse(null);
+};
+
+const handleFetchByAadhaarDob = async (aadhaar: string, dobStr: string) => {
+  if (!aadhaar || !dobStr) return;
+  setIsProcessing(true);
+  setResponse(null);
+  setAadhaarData(null);
+  try {
+    const apiResponse = await searchAadhaar(aadhaar, dobStr);
+    const responseData = apiResponse as AadhaarResponse;
+    setResponse(responseData);
+    if (responseData.success && responseData.data) {
+      setAadhaarData(responseData.data);
+      toast.success("Data fetched successfully");
+    } else {
+      toast.error(responseData.message || "Fetch failed");
+    }
+  } catch (err) {
+    console.error("Fetch by Aadhaar/DOB error:", err);
+    toast.error("Fetch failed");
+  } finally {
+    setIsProcessing(false);
+  }
 };
 
 
@@ -144,6 +173,7 @@ const handleDismiss = () => {
             response={response}
             onRetry={handleRetry}
             onDismiss={handleDismiss}
+            onFetchByAadhaarDob={handleFetchByAadhaarDob}
           />
         </div>
 

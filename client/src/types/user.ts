@@ -6,4 +6,5 @@ export interface UserDetailsDisplayProps {
   response?: AadhaarResponse | null;
   onRetry?: () => void;
   onDismiss?: () => void;
+  onFetchByAadhaarDob?: (aadhaar: string, dob: string) => void;
 }
