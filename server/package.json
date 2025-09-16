@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsx watch ./src/server.ts"
+    "start": "node ./src/server.js",
+    "dev": "tsx watch ./src/server.ts",
+    "test": "echo \"No tests defined\" && exit 1"
   },
   "keywords": [],
   "author": "",
