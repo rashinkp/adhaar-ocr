@@ -15,8 +15,11 @@
   "type": "module",
   "devDependencies": {
     "@types/cors": "^2.8.19",
+    "@types/dotenv": "^6.1.1",
     "@types/express": "^5.0.3",
-    "@types/node": "^24.3.1",
+    "@types/mongoose": "^5.11.96",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.5.0",
     "@types/sharp": "^0.31.1",
     "eslint": "^9.35.0",
     "install": "^0.13.0",
@@ -30,7 +33,6 @@
   },
   "dependencies": {
     "@types/morgan": "^1.9.10",
-    "@types/multer": "^2.0.0",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.2",
@@ -42,6 +44,7 @@
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
     "sharp": "^0.34.3",
+    "tesseract.js": "^6.0.1",
     "tesseract.ts": "^1.1.2",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0"

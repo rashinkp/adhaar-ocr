@@ -17,8 +17,8 @@ export const performOcrProcessing = async (
     Tesseract.recognize(backPng, "eng"),
   ]);
 
-  const frontText = frontResult.text;
-  const backText = backResult.text;
+  const frontText = frontResult.data.text;
+  const backText = backResult.data.text;
 
   const parsed: ParsedAadhaar = parseAadhaarText(frontText, backText);
 
@@ -44,8 +44,8 @@ export const performOcrProcessingWithValidation = async (
     Tesseract.recognize(backPng, "eng"),
   ]);
 
-  const frontText = frontResult.text;
-  const backText = backResult.text;
+  const frontText = frontResult.data.text;
+  const backText = backResult.data.text;
 
   return parseAadhaarTextWithValidation(frontText, backText);
 };

@@ -11,8 +11,8 @@ export const performOcrProcessing = async (frontBuffer, backBuffer) => {
         Tesseract.recognize(frontPng, "eng"),
         Tesseract.recognize(backPng, "eng"),
     ]);
-    const frontText = frontResult.text;
-    const backText = backResult.text;
+    const frontText = frontResult.data.text;
+    const backText = backResult.data.text;
     const parsed = parseAadhaarText(frontText, backText);
     return {
         frontText,
@@ -30,8 +30,8 @@ export const performOcrProcessingWithValidation = async (frontBuffer, backBuffer
         Tesseract.recognize(frontPng, "eng"),
         Tesseract.recognize(backPng, "eng"),
     ]);
-    const frontText = frontResult.text;
-    const backText = backResult.text;
+    const frontText = frontResult.data.text;
+    const backText = backResult.data.text;
     return parseAadhaarTextWithValidation(frontText, backText);
 };
 //# sourceMappingURL=ocr.service.js.map
