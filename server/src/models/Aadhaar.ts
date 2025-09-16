@@ -4,9 +4,9 @@ import { Schema, model, Document } from "mongoose";
 interface IAadhaar extends Document {
   aadhaarNumber: string;
   name: string;
-  dob: string;
+  dob?: string;
   address: string;
-  gender: string;
+  gender?: string;
   createdAt: Date;
 }
 
@@ -14,9 +14,9 @@ interface IAadhaar extends Document {
 const AadhaarSchema = new Schema<IAadhaar>({
   aadhaarNumber: { type: String, required: true, unique: true },
   name: { type: String, required: true },
-  dob: { type: String, required: true }, 
-  address: { type: String, required: true },
-  gender: { type: String },
+  dob: { type: String, required: false }, 
+  address: { type: String, required: false },
+  gender: { type: String, required: false },
   createdAt: { type: Date, default: Date.now },
 });
 

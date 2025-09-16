@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { performOcrProcessing } from "../services/ocr.service.js";
 import { AadhaarModel } from "../models/Aadhaar.js";
 import { parse, format } from "date-fns";
+import logger from "../config/logger.config.js";
 
 export const processOcr = async (req: Request, res: Response) => {
   try {
@@ -35,7 +36,13 @@ export const processOcr = async (req: Request, res: Response) => {
 
     const ocrResult = await performOcrProcessing(frontBuffer, backBuffer);
 
-    console.log("OCR Result:", ocrResult);
+    logger.info("OCR processing completed", {
+      hasParsedData: !!ocrResult.parsed,
+      aadhaarNumber: ocrResult.parsed?.aadhaarNumber,
+      ip: req.ip,
+    });
+
+    console.log(ocrResult);
 
     const { parsed, frontText, backText } = ocrResult as unknown as {
       parsed?: {
@@ -52,33 +59,52 @@ export const processOcr = async (req: Request, res: Response) => {
     if (
       !parsed ||
       !parsed.aadhaarNumber ||
-      !parsed.dob ||
-      !parsed.name ||
-      !parsed.address
+      !parsed.name
     ) {
-      return res.status(422).json({
-        message: "Parsed data incomplete; cannot store",
-        parsed: parsed || {},
-        ocrText: { frontText, backText },
+      logger.warn("OCR parsing incomplete", {
+        missingFields: {
+          aadhaarNumber: !parsed?.aadhaarNumber,
+          dob: !parsed?.dob,
+          name: !parsed?.name,
+          address: !parsed?.address,
+        },
+        ip: req.ip,
       });
+      
+      // Only Aadhaar number and name are mandatory now
+      if (!parsed?.aadhaarNumber || !parsed?.name) {
+        return res.status(422).json({
+          message: "Parsed data incomplete; cannot store",
+          parsed: parsed || {},
+          ocrText: { frontText, backText },
+        });
+      }
     }
 
-    // Convert DOB from dd/MM/yyyy to yyyy-MM-dd format for consistent storage
-    const dobDate = parse(parsed.dob, "dd/MM/yyyy", new Date());
-    const formattedDate = format(dobDate, "yyyy-MM-dd");
+    // Format DOB if present
+    let formattedDate: string | undefined;
+    if (parsed.dob) {
+      const dobDate = parse(parsed.dob, "dd/MM/yyyy", new Date());
+      formattedDate = format(dobDate, "yyyy-MM-dd");
+    }
 
     const saved = await AadhaarModel.findOneAndUpdate(
       { aadhaarNumber: parsed.aadhaarNumber },
       {
         aadhaarNumber: parsed.aadhaarNumber,
         name: parsed.name,
-        dob: formattedDate,
+        ...(formattedDate ? { dob: formattedDate } : {}),
         address: parsed.address,
         gender: parsed.gender || "",
       },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
 
+    logger.info("Aadhaar record saved successfully", {
+      aadhaarNumber: saved.aadhaarNumber,
+      isNewRecord: !saved.createdAt,
+      ip: req.ip,
+    });
 
     res.json({
       success: true,
@@ -87,16 +113,27 @@ export const processOcr = async (req: Request, res: Response) => {
       parsed,
     });
   } catch (error) {
-    console.error(error);
+    logger.error("OCR processing failed", {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      ip: req.ip,
+    });
     res.status(500).json({ success: false, message: "OCR processing failed" });
   }
 };
 
 export const findRecord = async (req: Request, res: Response) => {
+  const { aadhaarNumber, dob } = req.query;
+  
   try {
-    const { aadhaarNumber, dob } = req.query;
 
     if (!aadhaarNumber || !dob) {
+      logger.warn("Search request missing required parameters", {
+        hasAadhaarNumber: !!aadhaarNumber,
+        hasDob: !!dob,
+        ip: req.ip,
+      });
+      
       res.status(400).json({
         success: false,
         message: "aadhaarNumber and dob are required",
@@ -104,29 +141,24 @@ export const findRecord = async (req: Request, res: Response) => {
       return;
     }
 
-    // Convert input DOB to yyyy-MM-dd format if it's in dd/MM/yyyy format
     let searchDob = dob as string;
     if (searchDob.includes('/')) {
       const dobDate = parse(searchDob, "dd/MM/yyyy", new Date());
       searchDob = format(dobDate, "yyyy-MM-dd");
     }
 
-    // First try exact match with the converted format
     let record = await AadhaarModel.findOne({
       aadhaarNumber: aadhaarNumber as string,
       dob: searchDob,
     });
 
-    // If no exact match, try to find records with old format and convert them for comparison
     if (!record) {
       const allRecords = await AadhaarModel.find({
         aadhaarNumber: aadhaarNumber as string,
       });
       
-      // Check if any record has DOB in old format that matches when converted
       for (const dbRecord of allRecords) {
-        if (dbRecord.dob.includes('/')) {
-          // Convert database DOB from dd/MM/yyyy to yyyy-MM-dd for comparison
+        if (dbRecord.dob && dbRecord.dob.includes('/')) {
           const dbDobDate = parse(dbRecord.dob, "dd/MM/yyyy", new Date());
           const dbFormattedDob = format(dbDobDate, "yyyy-MM-dd");
           
@@ -139,15 +171,31 @@ export const findRecord = async (req: Request, res: Response) => {
     }
 
     if (!record) {
+      logger.info("Aadhaar record not found", {
+        aadhaarNumber,
+        dob: searchDob,
+        ip: req.ip,
+      });
+      
       res.status(404).json({ success: false, message: "Record not found" });
       return;
     }
 
+    logger.info("Aadhaar record found successfully", {
+      aadhaarNumber: record.aadhaarNumber,
+      ip: req.ip,
+    });
+
     res.status(200).json({ success: true, data: record });
   } catch (error) {
-    console.error(error);
-    res
-      .status(500)
-      .json({ success: false, message: "Error finding Aadhaar record" });
+    logger.error("Error finding Aadhaar record", {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      aadhaarNumber: aadhaarNumber as string,
+      dob: dob as string,
+      ip: req.ip,
+    });
+    
+    res.status(500).json({ success: false, message: "Error finding Aadhaar record" });
   }
 };

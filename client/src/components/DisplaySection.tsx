@@ -3,7 +3,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { User, Calendar, CreditCard, Home, AlertCircle, CheckCircle } from "lucide-react";
-import ErrorDisplay from "./ErrorDisplay";
 import UserDetailsSkeleton from "./skeleton/UserDetailsSkeleton";
 import type { UserDetailsDisplayProps } from "@/types/user";
 import type { AadhaarData } from "@/types/adhaar";
@@ -16,18 +15,29 @@ const UserDetailsDisplay = ({ data, isProcessing, response, onRetry, onDismiss, 
     return <UserDetailsSkeleton />;
   }
 
-  // Show error state
+  // Show simple error state (no box)
   if (response && !response.success) {
+    const msg =
+      response.message === "Record not found"
+        ? "No record found for this Aadhaar number and DOB. Please scan and upload."
+        : response.message || "Something went wrong. Please try again.";
+
     return (
-      <ErrorDisplay
-        validation={response.validation}
-        errors={response.errors}
-        suggestions={response.suggestions}
-        onRetry={onRetry}
-        onDismiss={onDismiss}
-        showRawText={true}
-        rawText={response.rawText}
-      />
+      <div className="max-w-md mx-auto p-4 text-center space-y-3">
+        <p className="text-red-600 text-sm">{msg}</p>
+        <div className="flex items-center justify-center gap-3 text-sm">
+          {onRetry && (
+            <button type="button" className="text-blue-600 underline" onClick={onRetry}>
+              Try again
+            </button>
+          )}
+          {onDismiss && (
+            <button type="button" className="text-gray-600 underline" onClick={onDismiss}>
+              Dismiss
+            </button>
+          )}
+        </div>
+      </div>
     );
   }
 
@@ -84,7 +94,7 @@ const UserDetailsCard = ({ data, onFetch }: { data: AadhaarData; onFetch?: (aadh
           <User className="w-5 h-5 text-gray-500" />
           <div className="flex-1">
             <span className="font-medium text-gray-700">Gender:</span>{" "}
-            <span className="text-gray-900">{data.gender || "Not specified"}</span>
+            <span className="text-gray-900">{data.gender || "Not available"}</span>
           </div>
         </div>
 
@@ -94,16 +104,16 @@ const UserDetailsCard = ({ data, onFetch }: { data: AadhaarData; onFetch?: (aadh
           <Calendar className="w-5 h-5 text-gray-500" />
           <div className="flex-1">
             <span className="font-medium text-gray-700">DOB:</span>{" "}
-            {onFetch ? (
+            {onFetch && data.dob ? (
               <button
                 type="button"
                 className="text-blue-600 hover:underline"
-                onClick={() => onFetch(data.aadhaarNumber, data.dob.replace(/-/g, "/"))}
+                onClick={() => onFetch(data.aadhaarNumber, data.dob!.replace(/-/g, "/"))}
               >
                 {data.dob}
               </button>
             ) : (
-              <span className="text-gray-900">{data.dob}</span>
+              <span className="text-gray-900">{data.dob || "Not available"}</span>
             )}
           </div>
         </div>
@@ -118,7 +128,7 @@ const UserDetailsCard = ({ data, onFetch }: { data: AadhaarData; onFetch?: (aadh
               <button
                 type="button"
                 className="text-blue-600 font-mono hover:underline"
-                onClick={() => onFetch(data.aadhaarNumber, data.dob.replace(/-/g, "/"))}
+                onClick={() => onFetch(data.aadhaarNumber, data.dob!.replace(/-/g, "/"))}
               >
                 {data.aadhaarNumber}
               </button>
@@ -134,7 +144,7 @@ const UserDetailsCard = ({ data, onFetch }: { data: AadhaarData; onFetch?: (aadh
           <Home className="w-5 h-5 text-gray-500 mt-1" />
           <div className="flex-1">
             <span className="font-medium text-gray-700">Address:</span>{" "}
-            <span className="text-gray-900 text-sm leading-relaxed whitespace-pre-line">{data.address}</span>
+            <span className="text-gray-900 text-sm leading-relaxed whitespace-pre-line">{data.address || "Not available"}</span>
           </div>
         </div>
       </CardContent>

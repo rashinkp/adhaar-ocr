@@ -31,6 +31,23 @@ const normalize = (text: string): string => {
     .join("\n");
 };
 
+// Remove leading OCR noise like "www", "W WW" at the start of lines
+const sanitizeAddressHead = (address: string): string => {
+  const stripLine = (line: string): string => {
+    let s = line.trim();
+    // Remove patterns like www / w w w / W WW with dots/spaces/hyphens
+    s = s.replace(/^(?:w[\s\.-]*){3,}/i, "");
+    // Remove sequences of single letters separated by spaces (e.g., "W WW")
+    s = s.replace(/^(?:[A-Za-z]\s*){3,}(?=\b|$)/, "");
+    return s.trim();
+  };
+  return address
+    .split("\n")
+    .map(stripLine)
+    .join("\n")
+    .trim();
+};
+
 // Replace fancy quotes/dashes and strip weird glyph noise commonly introduced by OCR
 const normalizePunctuation = (text: string): string => {
   return text
@@ -64,6 +81,8 @@ const cleanAddressChunks = (address: string): string[] => {
            .replace(/,{2,}/g, ",")
            .replace(/^,|,$/g, "")
            .trim();
+      // Drop generic words like 'flat - 800003' prefix word 'flat'
+      c = c.replace(/^flat\s*-?\s*/i, "");
       return c;
     })
     .filter(Boolean)
@@ -77,6 +96,7 @@ const cleanAddressChunks = (address: string): string[] => {
   return chunks;
 };
 
+// Choose key address lines: care-of, locality, and state+PIN
 const selectAddressLines = (chunks: string[]): string[] => {
   if (chunks.length === 0) return [];
   const lower = (s: string) => s.toLowerCase();
@@ -85,29 +105,25 @@ const selectAddressLines = (chunks: string[]): string[] => {
   const careOfIdx = chunks.findIndex((c) => /\bc\s*\/\s*o\b/i.test(c));
   const careOf = careOfIdx !== -1 ? chunks[careOfIdx] : undefined;
 
-  // 2) Locality line: the next meaningful chunk after care-of, prefer without digits
+  // 2) Locality line: next meaningful chunk after care-of
   let locality: string | undefined;
   for (let i = (careOfIdx !== -1 ? careOfIdx + 1 : 0); i < chunks.length; i++) {
     const c = chunks[i]!;
-    if (/flat\b/i.test(c)) continue;
     if (/uidai|gov|help@|india|unique|ident/i.test(c)) continue;
-    const hasLetters = /[A-Za-z]{3,}/.test(c);
-    if (!hasLetters) continue;
+    if (!/[A-Za-z]{3,}/.test(c)) continue;
     locality = c.replace(/\s*,\s*$/g, "").trim();
     break;
   }
 
   // 3) State + PIN: prefer chunk with a 6-digit PIN (last such chunk)
   const pinChunk = [...chunks].reverse().find((c) => /\b\d{6}\b/.test(c));
-  let statePin = pinChunk;
+  let statePin = pinChunk ? pinChunk : undefined;
   if (statePin) {
-    // Ensure there is at least one word before PIN
     const m = statePin.match(/([A-Za-z][A-Za-z\s\-']{2,}?)[^\d]*\b(\d{6})\b/);
     if (m) statePin = `${m[1]!.trim()} - ${m[2]}`;
   }
 
   const lines = [careOf, locality, statePin].filter((v): v is string => Boolean(v));
-  // Remove duplicates and noisy leading tokens
   const dedup: string[] = [];
   for (const l of lines) {
     const cleaned = l.replace(/^[-,\s]+|[-,\s]+$/g, "").trim();
@@ -115,6 +131,11 @@ const selectAddressLines = (chunks: string[]): string[] => {
     if (!dedup.some((x) => lower(x) === lower(cleaned))) dedup.push(cleaned);
   }
   return dedup;
+};
+
+const formatStatePinInline = (text: string): string => {
+  // Convert "Bihar 800003" or "Bihar— 800003" to "Bihar - 800003"
+  return text.replace(/([A-Za-z][A-Za-z\s']{2,}?)\s*[—–-]?\s*(\b\d{6}\b)/, "$1 - $2");
 };
 
 // Validation functions
@@ -368,12 +389,34 @@ const extractAadhaarNumber = (text: string): string | undefined => {
 };
 
 const extractDob = (text: string): string | undefined => {
-  // Matches DOB: 03/06/2003 or 03-06-2003
-  const dobRegex = /(DOB\s*[:\-]?\s*)(\d{2}[\/\-]\d{2}[\/\-]\d{4})/i;
-  const m1 = text.match(dobRegex);
-  if (m1 && m1[2]) return m1[2].replace(/-/g, "/");
+  const labelDob = text.match(/\bdob\s*[:\-]\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
+  const raw = labelDob?.[1];
+  const candidate = raw || undefined;
 
-  // Matches Year of Birth
+  const normalizeDate = (d: string): string | undefined => {
+    if (!d) return undefined;
+    const parts = d.replace(/-/g, "/").split("/");
+    if (parts.length !== 3) return undefined;
+    const [day, month, year] = parts as [string, string, string];
+    let dd = day;
+    let mm = month;
+    let yyyy = year;
+    if (dd.length === 1) dd = `0${dd}`;
+    if (mm.length === 1) mm = `0${mm}`;
+    if (yyyy.length === 2) {
+      // Assume 19xx/20xx is unknown; skip converting 2-digit years to avoid ambiguity
+      return undefined;
+    }
+    return `${dd}/${mm}/${yyyy}`;
+  };
+
+  const normalized = candidate ? normalizeDate(candidate) : undefined;
+  if (normalized) return normalized;
+
+  const dobRegex = /(DOB\s*[:\-]?\s*)(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/i;
+  const m1 = text.match(dobRegex);
+  if (m1 && m1[2]) return normalizeDate(m1[2]);
+
   const yobRegex = /(YOB|Year\s*of\s*Birth)\s*[:\-]?\s*(\d{4})/i;
   const m2 = text.match(yobRegex);
   if (m2 && m2[2]) return `01/01/${m2[2]}`;
@@ -381,23 +424,21 @@ const extractDob = (text: string): string | undefined => {
 };
 
 const extractGender = (text: string): ParsedAadhaar["gender"] | undefined => {
-  const normalized = text.replace(/[^a-z]/gi, "").toLowerCase();
-  if (normalized.includes("female") || normalized.includes("femal") || normalized.includes("femle")) return "Female";
-  if (normalized.includes("male") || normalized.includes("male") || normalized.includes("maie")) return "Male";
-  if (normalized.includes("transgender") || normalized.includes("other")) return "Other";
+  if (/\bfemale\b/i.test(text)) return "Female";
+  if (/\bmale\b/i.test(text)) return "Male";
+  if (/\btransgender\b|\bother\b/i.test(text)) return "Other";
   return undefined;
 };
 
 const isLikelyName = (line: string): boolean => {
   if (!line) return false;
   if (line.length < 3) return false;
-  // allow occasional OCR noise digits but mostly letters
   const digitsCount = (line.match(/\d/g) || []).length;
   const lettersCount = (line.match(/[A-Za-z]/g) || []).length;
   if (digitsCount > 2 && digitsCount >= lettersCount) return false;
   if (/uidai|gov|help@|india|unique|ident/i.test(line)) return false;
   if (/address|dob|yob|male|female/i.test(line)) return false;
-  // mostly letters and spaces
+  if (/\bc\s*\/\s*o\b/i.test(line)) return false;
   const letters = line.replace(/[^A-Za-z\s]/g, "");
   return letters.trim().length >= Math.min(line.trim().length * 0.8, line.trim().length);
 };
@@ -406,7 +447,6 @@ const extractName = (front: string, back: string): string | undefined => {
   const lines = normalize(`${front}\n${back}`).split("\n");
   for (const line of lines) {
     if (!isLikelyName(line)) continue;
-    // Drop trailing tokens with digits (e.g., "RASHINKF 4J4" -> "RASHINKF")
     const tokens = line.split(/\s+/).filter(Boolean);
     const cleanedTokens = tokens.filter((t, idx) => idx === 0 || !/\d/.test(t));
     const candidate = cleanedTokens.join(" ").replace(/\s+/g, " ").trim();
@@ -419,13 +459,11 @@ const extractAddress = (text: string): string | undefined => {
   const normalizedText = normalizePunctuation(normalize(text));
   const lines = normalizedText.split("\n").map((l) => l.trim()).filter(Boolean);
 
-  // 1) Try to find explicit Address label and take following lines
   let labelIndex = lines.findIndex((l) => /address\s*:?$/i.test(l) || /address\s*:/i.test(l));
   if (labelIndex !== -1) {
     const block: string[] = [];
     for (let i = labelIndex + 1; i < Math.min(lines.length, labelIndex + 8); i++) {
       const l = lines[i]!;
-      // Stop if we hit another obvious section or the Aadhaar number line
       if (/uidai|gov|help@|india|unique|ident/i.test(l)) break;
       const digitsOnly = l.replace(/\D/g, "");
       if (/(\d{12,})/.test(digitsOnly)) break;
@@ -435,7 +473,8 @@ const extractAddress = (text: string): string | undefined => {
       if (!hasLetters) continue;
       block.push(l);
     }
-    const candidate = block.join(", ");
+    let candidate = block.join(", ");
+    candidate = formatStatePinInline(candidate);
     const chunks = cleanAddressChunks(candidate);
     const linesOut = selectAddressLines(chunks);
     if (linesOut.length > 0) return linesOut.join("\n");
@@ -469,10 +508,11 @@ const extractAddress = (text: string): string | undefined => {
     }
   }
   flush();
-  const chunks = cleanAddressChunks(bestBlock);
+  const chunks = cleanAddressChunks(formatStatePinInline(bestBlock));
   const linesOut = selectAddressLines(chunks);
   const cleanedJoined = linesOut.join("\n");
-  return cleanedJoined || undefined;
+  const sanitized = cleanedJoined ? sanitizeAddressHead(cleanedJoined) : "";
+  return sanitized || undefined;
 };
 
 export const parseAadhaarText = (
@@ -481,19 +521,20 @@ export const parseAadhaarText = (
 ): ParsedAadhaar => {
   const normalizedFront = normalize(frontText);
   const normalizedBack = normalize(backText);
+  const combined = `${normalizedFront}\n${normalizedBack}`;
 
-  const aadhaarNumber = extractAadhaarNumber(`${normalizedFront}\n${normalizedBack}`);
-  const dob = extractDob(`${normalizedFront}\n${normalizedBack}`);
-  const gender = extractGender(`${normalizedFront}\n${normalizedBack}`);
+  const aadhaarNumber = extractAadhaarNumber(combined);
+  const dob = extractDob(combined);
+  const gender = extractGender(combined);
   const name = extractName(normalizedFront, normalizedBack);
-  const address = extractAddress(normalizedBack) || extractAddress(normalizedFront);
+  const address = extractAddress(combined);
 
   const result: ParsedAadhaar = {};
   if (aadhaarNumber) result.aadhaarNumber = aadhaarNumber;
   if (dob) result.dob = dob;
   if (gender) result.gender = gender;
   if (name) result.name = name;
-  if (address) result.address = address;
+  if (address) result.address = sanitizeAddressHead(address);
   return result;
 };
 
@@ -505,19 +546,20 @@ export const parseAadhaarTextWithValidation = (
     const normalizedFront = normalize(frontText);
     const normalizedBack = normalize(backText);
     const rawText = { frontText: normalizedFront, backText: normalizedBack };
+    const combined = `${normalizedFront}\n${normalizedBack}`;
 
-    const aadhaarNumber = extractAadhaarNumber(`${normalizedFront}\n${normalizedBack}`);
-    const dob = extractDob(`${normalizedFront}\n${normalizedBack}`);
-    const gender = extractGender(`${normalizedFront}\n${normalizedBack}`);
+    const aadhaarNumber = extractAadhaarNumber(combined);
+    const dob = extractDob(combined);
+    const gender = extractGender(combined);
     const name = extractName(normalizedFront, normalizedBack);
-    const address = extractAddress(normalizedBack) || extractAddress(normalizedFront);
+    const address = extractAddress(combined);
 
     const parsed: ParsedAadhaar = {};
     if (aadhaarNumber) parsed.aadhaarNumber = aadhaarNumber;
     if (dob) parsed.dob = dob;
     if (gender) parsed.gender = gender;
     if (name) parsed.name = name;
-    if (address) parsed.address = address;
+    if (address) parsed.address = sanitizeAddressHead(address);
 
     // Validate each field
     const errors: string[] = [];

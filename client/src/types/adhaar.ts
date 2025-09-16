@@ -1,9 +1,9 @@
 export interface AadhaarData {
   aadhaarNumber: string;
-  address: string;
-  dob: string;
+  address?: string;
+  dob?: string;
   name: string;
-  gender: string;
+  gender?: string;
 }
 
 export interface ValidationResult {
