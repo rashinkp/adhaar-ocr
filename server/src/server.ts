@@ -5,6 +5,7 @@ import { connectDB } from "./config/database.config.js";
 import config from "./config/env.config.js";
 import logger from "./config/logger.config.js";
 import { corsOptions, rateLimiter, errorHandler } from "./middleware/security.middleware.js";
+import mongoose from "mongoose";
 
 const app = express();
 

@@ -126,63 +126,65 @@ export const findRecord = async (req: Request, res: Response) => {
   const { aadhaarNumber, dob } = req.query;
   
   try {
-
-    if (!aadhaarNumber || !dob) {
-      logger.warn("Search request missing required parameters", {
+    if (!aadhaarNumber) {
+      logger.warn("Search request missing aadhaarNumber", {
         hasAadhaarNumber: !!aadhaarNumber,
         hasDob: !!dob,
         ip: req.ip,
       });
-      
-      res.status(400).json({
-        success: false,
-        message: "aadhaarNumber and dob are required",
-      });
+      res.status(400).json({ success: false, message: "aadhaarNumber is required" });
       return;
     }
 
-    let searchDob = dob as string;
-    if (searchDob.includes('/')) {
-      const dobDate = parse(searchDob, "dd/MM/yyyy", new Date());
-      searchDob = format(dobDate, "yyyy-MM-dd");
-    }
+    let record = null as Awaited<ReturnType<typeof AadhaarModel.findOne>> | null;
 
-    let record = await AadhaarModel.findOne({
-      aadhaarNumber: aadhaarNumber as string,
-      dob: searchDob,
-    });
+    if (dob) {
+      let searchDob = dob as string;
+      if (searchDob.includes('/')) {
+        const dobDate = parse(searchDob, "dd/MM/yyyy", new Date());
+        searchDob = format(dobDate, "yyyy-MM-dd");
+      }
 
-    if (!record) {
-      const allRecords = await AadhaarModel.find({
+      record = await AadhaarModel.findOne({
         aadhaarNumber: aadhaarNumber as string,
+        dob: searchDob,
       });
-      
-      for (const dbRecord of allRecords) {
-        if (dbRecord.dob && dbRecord.dob.includes('/')) {
-          const dbDobDate = parse(dbRecord.dob, "dd/MM/yyyy", new Date());
-          const dbFormattedDob = format(dbDobDate, "yyyy-MM-dd");
-          
-          if (dbFormattedDob === searchDob) {
-            record = dbRecord;
-            break;
+
+      if (!record) {
+        const allRecords = await AadhaarModel.find({
+          aadhaarNumber: aadhaarNumber as string,
+        });
+        
+        for (const dbRecord of allRecords) {
+          if (dbRecord.dob && dbRecord.dob.includes('/')) {
+            const dbDobDate = parse(dbRecord.dob, "dd/MM/yyyy", new Date());
+            const dbFormattedDob = format(dbDobDate, "yyyy-MM-dd");
+            if (dbFormattedDob === searchDob) {
+              record = dbRecord;
+              break;
+            }
           }
         }
       }
+    } else {
+      // No DOB provided: return the most recently created record for this Aadhaar number
+      record = await AadhaarModel.findOne({ aadhaarNumber: aadhaarNumber as string }).sort({ createdAt: -1 });
     }
 
     if (!record) {
       logger.info("Aadhaar record not found", {
         aadhaarNumber,
-        dob: searchDob,
+        dob: dob as string | undefined,
         ip: req.ip,
       });
-      
       res.status(404).json({ success: false, message: "Record not found" });
       return;
     }
 
+    const doc = record as unknown as { aadhaarNumber: string };
+
     logger.info("Aadhaar record found successfully", {
-      aadhaarNumber: record.aadhaarNumber,
+      aadhaarNumber: doc.aadhaarNumber,
       ip: req.ip,
     });
 
@@ -192,10 +194,9 @@ export const findRecord = async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
       aadhaarNumber: aadhaarNumber as string,
-      dob: dob as string,
+      dob: dob as string | undefined,
       ip: req.ip,
     });
-    
     res.status(500).json({ success: false, message: "Error finding Aadhaar record" });
   }
 };

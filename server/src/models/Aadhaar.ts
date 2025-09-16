@@ -1,6 +1,5 @@
 import { Schema, model, Document } from "mongoose";
 
-// Interface for Aadhaar OCR Document
 interface IAadhaar extends Document {
   aadhaarNumber: string;
   name: string;
@@ -10,7 +9,6 @@ interface IAadhaar extends Document {
   createdAt: Date;
 }
 
-// Mongoose Schema
 const AadhaarSchema = new Schema<IAadhaar>({
   aadhaarNumber: { type: String, required: true, unique: true },
   name: { type: String, required: true },
@@ -20,7 +18,8 @@ const AadhaarSchema = new Schema<IAadhaar>({
   createdAt: { type: Date, default: Date.now },
 });
 
-// Mongoose Model
+AadhaarSchema.index({ aadhaarNumber: 1, dob: 1 });
+
 const AadhaarModel = model<IAadhaar>("Aadhaar", AadhaarSchema);
 
 export { AadhaarModel };
