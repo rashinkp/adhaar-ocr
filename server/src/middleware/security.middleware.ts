@@ -1,24 +1,19 @@
 import type { Request, Response, NextFunction } from 'express';
 import logger from '../config/logger.config.js';
 
-// In-memory rate limit store (simple and typed)
 const rateLimitStore: Map<string, number[]> = new Map();
 
-// Simple CORS
 export const corsOptions = {
-  origin: process.env.ALLOWED_ORIGINS?.split(','),
+  origin: process.env.ALLOWED_ORIGINS?.split(",").map((o) => o.trim()),
   credentials: true,
 };
 
-// Simple rate limiting
 export const rateLimiter = (req: Request, res: Response, next: NextFunction) => {
-  // Basic rate limiting - 100 requests per 15 minutes
   const key: string = req.ip || 'unknown';
   const now = Date.now();
-  const windowMs = 15 * 60 * 1000; // 15 minutes
+  const windowMs = 15 * 60 * 1000; 
   const maxRequests = 100;
   
-  // Read request timestamps for this IP
   const userRequests: number[] = rateLimitStore.get(key) || [];
   const recentRequests = userRequests.filter((time: number) => now - time < windowMs);
   
@@ -32,7 +27,6 @@ export const rateLimiter = (req: Request, res: Response, next: NextFunction) => 
   next();
 };
 
-// Simple error handler
 export const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
   logger.error('Error:', err.message);
   res.status(500).json({ success: false, message: 'Something went wrong' });
