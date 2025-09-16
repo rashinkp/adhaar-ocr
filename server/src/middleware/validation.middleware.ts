@@ -1,7 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import logger from '../config/logger.config.js';
 
-// Simple validation helpers
 const isValidAadhaar = (aadhaar: string): boolean => {
   return /^\d{12}$/.test(aadhaar) && 
          !aadhaar.split('').every((d: string) => d === aadhaar[0]) &&
@@ -17,7 +15,6 @@ const isValidDate = (dateStr: string): boolean => {
   return date < today && date.getFullYear() > 1900;
 };
 
-// Simple search validation
 export const validateSearch = (req: Request, res: Response, next: NextFunction) => {
   const { aadhaarNumber, dob } = req.query;
   
@@ -36,7 +33,6 @@ export const validateSearch = (req: Request, res: Response, next: NextFunction) 
   next();
 };
 
-// Simple file validation
 export const validateFiles = (req: Request, res: Response, next: NextFunction) => {
   if (!req.files) {
     return res.status(400).json({ success: false, message: 'No files provided' });

@@ -81,7 +81,6 @@ export const processOcr = async (req: Request, res: Response) => {
       }
     }
 
-    // Format DOB if present
     let formattedDate: string | undefined;
     if (parsed.dob) {
       const dobDate = parse(parsed.dob, "dd/MM/yyyy", new Date());
@@ -167,7 +166,6 @@ export const findRecord = async (req: Request, res: Response) => {
         }
       }
     } else {
-      // No DOB provided: return the most recently created record for this Aadhaar number
       record = await AadhaarModel.findOne({ aadhaarNumber: aadhaarNumber as string }).sort({ createdAt: -1 });
     }
 

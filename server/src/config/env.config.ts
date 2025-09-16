@@ -1,9 +1,7 @@
 import dotenv from 'dotenv';
 
-// Load environment variables
 dotenv.config();
 
-// Simple config - only what you need
 export const config = {
   port: parseInt(process.env.PORT || "5000", 10),
   mongoUri: process.env.MONGO_URI,

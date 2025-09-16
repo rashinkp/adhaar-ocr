@@ -5,13 +5,11 @@ import { validateFiles, validateSearch } from '../middleware/validation.middlewa
 
 const router = express.Router();
 
-// OCR processing
 router.post("/ocr", upload.fields([
   { name: "frontFile", maxCount: 1 },
   { name: "backFile", maxCount: 1 },
 ]), validateFiles, processOcr);
 
-// Search
 router.get('/search', validateSearch, findRecord);
 
 export default router;

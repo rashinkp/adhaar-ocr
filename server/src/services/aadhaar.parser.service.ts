@@ -1,26 +1,5 @@
-export type ParsedAadhaar = {
-  aadhaarNumber?: string;
-  dob?: string;
-  gender?: "Male" | "Female" | "Other";
-  name?: string;
-  address?: string;
-};
+import type { ParsedAadhaar, ParsedAadhaarWithValidation } from "../types/aadhaar.js";
 
-export type ValidationResult = {
-  isValid: boolean;
-  confidence: number;
-  errors: string[];
-  warnings: string[];
-  suggestions: string[];
-};
-
-export type ParsedAadhaarWithValidation = ParsedAadhaar & {
-  validation: ValidationResult;
-  rawText: {
-    frontText: string;
-    backText: string;
-  };
-};
 
 const normalize = (text: string): string => {
   return text
@@ -31,13 +10,10 @@ const normalize = (text: string): string => {
     .join("\n");
 };
 
-// Remove leading OCR noise like "www", "W WW" at the start of lines
 const sanitizeAddressHead = (address: string): string => {
   const stripLine = (line: string): string => {
     let s = line.trim();
-    // Remove patterns like www / w w w / W WW with dots/spaces/hyphens
     s = s.replace(/^(?:w[\s\.-]*){3,}/i, "");
-    // Remove sequences of single letters separated by spaces (e.g., "W WW")
     s = s.replace(/^(?:[A-Za-z]\s*){3,}(?=\b|$)/, "");
     return s.trim();
   };
@@ -48,26 +24,23 @@ const sanitizeAddressHead = (address: string): string => {
     .trim();
 };
 
-// Replace fancy quotes/dashes and strip weird glyph noise commonly introduced by OCR
 const normalizePunctuation = (text: string): string => {
   return text
-    .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'") // quotes -> '
-    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"') // quotes -> "
-    .replace(/[\u2012\u2013\u2014\u2015\u2212]/g, "-") // dashes -> -
-    .replace(/[\u00A0\u2000-\u200B]/g, " ") // non-breaking and zero-width spaces
-    .replace(/[\u20AC-\u20CF]/g, " ") // currency/other symbols → space
-    .replace(/[\u02C6\u02DC\u02DD]/g, " ") // misc accents → space
+    .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'") 
+    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"') 
+    .replace(/[\u2012\u2013\u2014\u2015\u2212]/g, "-") 
+    .replace(/[\u00A0\u2000-\u200B]/g, " ") 
+    .replace(/[\u20AC-\u20CF]/g, " ") 
+    .replace(/[\u02C6\u02DC\u02DD]/g, " ") 
     ;
 };
 
 const cleanAddressChunks = (address: string): string[] => {
-  // Start with punctuation normalization then split into chunks
   let chunks: string[] = normalizePunctuation(address)
     .split(/\s*,\s*/)
     .map((chunk) => chunk.trim())
     .filter((chunk) => chunk.length > 0)
     .map((chunk) => {
-      // Drop chunks that are mostly non-letters and very short
       const letters = (chunk.match(/[A-Za-z]/g) || []).length;
       if (letters === 0) return "";
       if (letters <= 2 && chunk.length <= 4) return "";

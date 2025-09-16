@@ -1,7 +1,6 @@
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 
-// Define log levels
 const levels = {
   error: 0,
   warn: 1,
@@ -10,7 +9,6 @@ const levels = {
   debug: 4,
 };
 
-// Define colors for each level
 const colors = {
   error: 'red',
   warn: 'yellow',
@@ -19,12 +17,9 @@ const colors = {
   debug: 'white',
 };
 
-// Tell winston that you want to link the colors
 winston.addColors(colors);
 
-// Define which transports the logger must use
 const transports = [
-  // Console transport
   new winston.transports.Console({
     format: winston.format.combine(
       winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
@@ -35,7 +30,6 @@ const transports = [
     ),
   }),
   
-  // File transport for errors
   new DailyRotateFile({
     filename: 'logs/error-%DATE%.log',
     datePattern: 'YYYY-MM-DD',
@@ -48,7 +42,6 @@ const transports = [
     maxFiles: '14d',
   }),
   
-  // File transport for all logs
   new DailyRotateFile({
     filename: 'logs/combined-%DATE%.log',
     datePattern: 'YYYY-MM-DD',
@@ -61,7 +54,6 @@ const transports = [
   }),
 ];
 
-// Create the logger
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   levels,
@@ -69,7 +61,6 @@ const logger = winston.createLogger({
   exitOnError: false,
 });
 
-// Create a stream object with a 'write' function that will be used by morgan
 export const morganStream = {
   write: (message: string) => {
     logger.http(message.substring(0, message.lastIndexOf('\n')));
