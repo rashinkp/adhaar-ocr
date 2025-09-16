@@ -11,6 +11,9 @@ const app = express();
 
 connectDB();
 
+
+console.log("MONGO_URI used:", process.env.MONGO_URI);
+
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(rateLimiter);
