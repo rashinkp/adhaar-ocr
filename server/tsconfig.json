@@ -39,6 +39,8 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
+    "types": ["node", "express"],
+    "moduleResolution": "nodenext"
   },
   "include": ["src"]
 }
