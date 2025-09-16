@@ -110,7 +110,7 @@ const FileUpload = ({ file, setFile, disabled = false }: FileUploadProps) => {
           setIsValidating(false);
           return;
         }
-      } catch (error) {
+      } catch  {
         setError("Unable to validate image. Please try a different file.");
         e.target.value = "";
         setIsValidating(false);
