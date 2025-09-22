@@ -22,35 +22,47 @@ winston.addColors(colors);
 const transports = [
   new winston.transports.Console({
     format: winston.format.combine(
-      winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
+      winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss:ms" }),
       winston.format.colorize({ all: true }),
-      winston.format.printf(
-        (info: any) => `${info.timestamp} ${info.level}: ${info.message}`
-      )
+      winston.format.printf((info: any) => {
+        const meta =
+          info && Object.keys(info).length > 3
+            ? JSON.stringify(
+                Object.fromEntries(
+                  Object.entries(info).filter(
+                    ([key]) => !["timestamp", "level", "message"].includes(key)
+                  )
+                ),
+                null,
+                2
+              )
+            : "";
+        return `${info.timestamp} ${info.level}: ${info.message} ${meta}`;
+      })
     ),
   }),
-  
+
   new DailyRotateFile({
-    filename: 'logs/error-%DATE%.log',
-    datePattern: 'YYYY-MM-DD',
-    level: 'error',
+    filename: "logs/error-%DATE%.log",
+    datePattern: "YYYY-MM-DD",
+    level: "error",
     format: winston.format.combine(
       winston.format.timestamp(),
       winston.format.json()
     ),
-    maxSize: '20m',
-    maxFiles: '14d',
+    maxSize: "20m",
+    maxFiles: "14d",
   }),
-  
+
   new DailyRotateFile({
-    filename: 'logs/combined-%DATE%.log',
-    datePattern: 'YYYY-MM-DD',
+    filename: "logs/combined-%DATE%.log",
+    datePattern: "YYYY-MM-DD",
     format: winston.format.combine(
       winston.format.timestamp(),
       winston.format.json()
     ),
-    maxSize: '20m',
-    maxFiles: '14d',
+    maxSize: "20m",
+    maxFiles: "14d",
   }),
 ];
 

@@ -5,10 +5,11 @@ import AadhaarParser from "./aadhaar.parser.service";
 
 
 class AadhaarOcrProcessor {
-  private _parser: AadhaarParser;
 
-  constructor() {
-    this._parser = new AadhaarParser();
+  constructor(
+    private _parser = new AadhaarParser
+  ) {
+    
   }
 
   private async _convertToPng(buffer: Buffer): Promise<Buffer> {
