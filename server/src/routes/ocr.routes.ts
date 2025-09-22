@@ -5,9 +5,12 @@ import {
   validateSearch,
 } from "../middleware/validation.middleware";
 import { OcrController } from "../controllers/ocr.controller";
+import AadhaarOcrProcessor from "../services/ocr.service";
+import { AadhaarModel } from "../models/Aadhaar";
 
 const router = express.Router();
-const ocrController = new OcrController();
+const ocrProcessor = new AadhaarOcrProcessor();
+const ocrController = new OcrController(AadhaarModel, ocrProcessor);
 
 router.post(
   "/ocr",

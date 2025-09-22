@@ -1,13 +1,14 @@
 import type { Request, Response } from "express";
-import { performOcrProcessing } from "../services/ocr.service";
 import logger from "../config/logger.config";
 import { format, parse } from "date-fns";
+import AadhaarOcrProcessor from "../services/ocr.service";
 import { AadhaarModel } from "../models/Aadhaar";
 
 export class OcrController {
-  /**
-   * POST /ocr - Process OCR
-   */
+  constructor(
+    private _aadhaarModel: typeof AadhaarModel,
+    private _ocrProcessor: AadhaarOcrProcessor
+  ) {}
   async processOcr(req: Request, res: Response) {
     try {
       if (
@@ -33,7 +34,7 @@ export class OcrController {
       const frontBuffer = files.frontFile[0].buffer;
       const backBuffer = files.backFile[0].buffer;
 
-      const ocrResult = await performOcrProcessing(frontBuffer, backBuffer);
+      const ocrResult = await this._ocrProcessor.performOcrProcessing(frontBuffer, backBuffer);
 
       logger.info("OCR processing completed", {
         hasParsedData: !!ocrResult.parsed,
@@ -77,7 +78,7 @@ export class OcrController {
         formattedDate = format(dobDate, "yyyy-MM-dd");
       }
 
-      const saved = await AadhaarModel.findOneAndUpdate(
+      const saved = await this._aadhaarModel.findOneAndUpdate(
         { aadhaarNumber: parsed.aadhaarNumber },
         {
           aadhaarNumber: parsed.aadhaarNumber,
@@ -132,7 +133,7 @@ export class OcrController {
       }
 
       let record = null as Awaited<
-        ReturnType<typeof AadhaarModel.findOne>
+        ReturnType<typeof this._aadhaarModel.findOne>
       > | null;
 
       if (dob) {
@@ -142,13 +143,13 @@ export class OcrController {
           searchDob = format(dobDate, "yyyy-MM-dd");
         }
 
-        record = await AadhaarModel.findOne({
+        record = await this._aadhaarModel.findOne({
           aadhaarNumber: aadhaarNumber as string,
           dob: searchDob,
         });
 
         if (!record) {
-          const allRecords = await AadhaarModel.find({
+          const allRecords = await this._aadhaarModel.find({
             aadhaarNumber: aadhaarNumber as string,
           });
 
@@ -164,7 +165,7 @@ export class OcrController {
           }
         }
       } else {
-        record = await AadhaarModel.findOne({
+        record = await this._aadhaarModel.findOne({
           aadhaarNumber: aadhaarNumber as string,
         }).sort({ createdAt: -1 });
       }

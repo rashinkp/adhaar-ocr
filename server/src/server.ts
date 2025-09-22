@@ -13,7 +13,6 @@ connectDB();
 
 
 app.use(cors(corsOptions));
-console.log("CORS Origins:", corsOptions.origin);
 app.use(express.json());
 app.use(rateLimiter);
 

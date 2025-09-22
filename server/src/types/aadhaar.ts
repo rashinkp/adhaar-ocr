@@ -6,14 +6,6 @@ export type ParsedAadhaar = {
   address?: string;
 };
 
-export type ValidationResult = {
-  isValid: boolean;
-  confidence: number;
-  errors: string[];
-  warnings: string[];
-  suggestions: string[];
-};
-
 export type ParsedAadhaarWithValidation = ParsedAadhaar & {
   validation: ValidationResult;
   rawText: {
@@ -21,3 +13,21 @@ export type ParsedAadhaarWithValidation = ParsedAadhaar & {
     backText: string;
   };
 };
+
+export interface RawText {
+  frontText: string;
+  backText: string;
+}
+
+export interface ValidationResult {
+  isValid: boolean;
+  error?: string;
+  warning?: string;
+}
+
+
+export interface OcrResult {
+  frontText: string;
+  backText: string;
+  parsed: ParsedAadhaar;
+}
