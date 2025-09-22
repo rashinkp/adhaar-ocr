@@ -1,10 +1,11 @@
 import express from "express";
 import cors from "cors";
-import router from "./routes/ocr.routes.js";
-import { connectDB } from "./config/database.config.js";
-import config from "./config/env.config.js";
-import logger from "./config/logger.config.js";
-import { corsOptions, rateLimiter, errorHandler } from "./middleware/security.middleware.js";
+import { connectDB } from "./config/database.config";
+import { corsOptions, rateLimiter } from "./middleware/security.middleware";
+import router from "./routes/ocr.routes";
+import { errorHandler } from "./middleware/error.middleware";
+import config from "./config/env.config";
+import logger from "./config/logger.config";
 
 const app = express();
 

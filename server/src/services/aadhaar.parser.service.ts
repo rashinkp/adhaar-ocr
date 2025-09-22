@@ -1,4 +1,4 @@
-import type { ParsedAadhaar, ParsedAadhaarWithValidation } from "../types/aadhaar.js";
+import { ParsedAadhaar, ParsedAadhaarWithValidation } from "../types/aadhaar";
 
 
 const normalize = (text: string): string => {

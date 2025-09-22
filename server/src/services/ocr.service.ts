@@ -1,7 +1,7 @@
-import Tesseract from "tesseract.js";
+import { Tesseract } from "tesseract.ts";
+import { ParsedAadhaar, ParsedAadhaarWithValidation } from "../types/aadhaar";
+import { parseAadhaarText, parseAadhaarTextWithValidation } from "./aadhaar.parser.service";
 import sharp from "sharp";
-import { parseAadhaarText, parseAadhaarTextWithValidation } from "./aadhaar.parser.service.js";
-import type { ParsedAadhaar, ParsedAadhaarWithValidation } from "../types/aadhaar.js";
 
 export const performOcrProcessing = async (
   frontBuffer: Buffer,

@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import logger from '../config/logger.config.js';
+import logger from '../config/logger.config';
 
 const rateLimitStore: Map<string, number[]> = new Map();
 
