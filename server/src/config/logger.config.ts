@@ -1,4 +1,5 @@
 import winston from 'winston';
+import type { TransformableInfo } from 'logform';
 import DailyRotateFile from 'winston-daily-rotate-file';
 
 const levels = {
@@ -24,7 +25,7 @@ const transports = [
     format: winston.format.combine(
       winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss:ms" }),
       winston.format.colorize({ all: true }),
-      winston.format.printf((info: any) => {
+      winston.format.printf((info: TransformableInfo) => {
         const meta =
           info && Object.keys(info).length > 3
             ? JSON.stringify(
