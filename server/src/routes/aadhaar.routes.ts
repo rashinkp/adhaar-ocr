@@ -1,36 +1,33 @@
-import express from 'express';
-import { AadhaarController } from '../controllers/AadhaarController.js';
-import { upload } from '../middleware/upload.middleware.js';
-import { validateFiles, validateSearch } from '../middleware/validation.middleware.js';
+import express from "express";
+import type { AadhaarController } from "../controllers/aadhaar.controller";
+import { upload } from "../middleware/uploadMiddleware";
+import { validateFiles, validateSearch } from "../middleware/validationMiddleware";
 
-export default function createAadhaarRoutes(aadhaarController: AadhaarController) {
+
+export default function createAadhaarRoutes(
+  aadhaarController: AadhaarController
+) {
   const router = express.Router();
 
   // OCR processing endpoint
-  router.post("/ocr", 
+  router.post(
+    "/ocr",
     upload.fields([
       { name: "frontFile", maxCount: 1 },
       { name: "backFile", maxCount: 1 },
-    ]), 
-    validateFiles, 
+    ]),
+    validateFiles,
     aadhaarController.processOcr
   );
 
   // Search endpoint
-  router.get('/search', 
-    validateSearch, 
-    aadhaarController.findRecord
-  );
+  router.get("/search", validateSearch, aadhaarController.findRecord);
 
   // Get all records endpoint
-  router.get('/records', 
-    aadhaarController.getAllRecords
-  );
+  router.get("/records", aadhaarController.getAllRecords);
 
   // Delete record endpoint
-  router.delete('/records/:aadhaarNumber', 
-    aadhaarController.deleteRecord
-  );
+  router.delete("/records/:aadhaarNumber", aadhaarController.deleteRecord);
 
   return router;
 }

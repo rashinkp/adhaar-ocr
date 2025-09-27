@@ -1,14 +1,19 @@
-import { AadhaarModel } from "../models/Aadhaar.js";
-import type { IAadhaar } from "../models/Aadhaar.js";
-import type { IAadhaarRepository } from "./IAadhaarRepository.js";
 import { parse, format } from "date-fns";
+import type { IAadhaarRepository } from "../interfaces/aadhaar.repository";
+import { AadhaarModel, type IAadhaar } from "../../models/aadhaar.model";
+
 
 export class AadhaarRepository implements IAadhaarRepository {
   async findByAadhaarNumber(aadhaarNumber: string): Promise<IAadhaar | null> {
-    return await AadhaarModel.findOne({ aadhaarNumber }).sort({ createdAt: -1 });
+    return await AadhaarModel.findOne({ aadhaarNumber }).sort({
+      createdAt: -1,
+    });
   }
 
-  async findByAadhaarNumberAndDob(aadhaarNumber: string, dob: string): Promise<IAadhaar | null> {
+  async findByAadhaarNumberAndDob(
+    aadhaarNumber: string,
+    dob: string
+  ): Promise<IAadhaar | null> {
     // Try exact match first
     let record = await AadhaarModel.findOne({
       aadhaarNumber,
@@ -18,9 +23,9 @@ export class AadhaarRepository implements IAadhaarRepository {
     if (!record) {
       // Try to find records with different date formats
       const allRecords = await AadhaarModel.find({ aadhaarNumber });
-      
+
       for (const dbRecord of allRecords) {
-        if (dbRecord.dob && dbRecord.dob.includes('/')) {
+        if (dbRecord.dob && dbRecord.dob.includes("/")) {
           try {
             const dbDobDate = parse(dbRecord.dob, "dd/MM/yyyy", new Date());
             const dbFormattedDob = format(dbDobDate, "yyyy-MM-dd");
@@ -29,7 +34,6 @@ export class AadhaarRepository implements IAadhaarRepository {
               break;
             }
           } catch (error) {
-            // Skip invalid dates
             continue;
           }
         }
@@ -53,7 +57,10 @@ export class AadhaarRepository implements IAadhaarRepository {
         formattedData.dob = format(dobDate, "yyyy-MM-dd");
       } catch (error) {
         // Keep original format if parsing fails
-        console.warn("Date parsing failed, keeping original format:", aadhaarData.dob);
+        console.warn(
+          "Date parsing failed, keeping original format:",
+          aadhaarData.dob
+        );
       }
     }
 

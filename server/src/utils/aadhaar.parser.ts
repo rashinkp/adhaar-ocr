@@ -1,4 +1,4 @@
-import type { AadhaarDto } from "../dto/AadhaarDto.js";
+import type { AadhaarDto } from "../dto/aadhaar.dto";
 
 
 export type ParsedAadhaarData = Partial<AadhaarDto>;

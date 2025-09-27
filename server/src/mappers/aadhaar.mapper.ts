@@ -1,5 +1,6 @@
-import type { AadhaarDto } from "../dto/AadhaarDto.js";
-import type { IAadhaar } from "../models/Aadhaar.js";
+import type { AadhaarDto } from "../dto/aadhaar.dto";
+import type { IAadhaar } from "../models/aadhaar.model";
+
 
 export class AadhaarMapper {
   static toDto(schema: IAadhaar): AadhaarDto {
@@ -50,9 +51,4 @@ export class AadhaarMapper {
     
     return schema;
   }
-
-  static toUpdateSchema(dto: Partial<AadhaarDto>): Partial<IAadhaar> {
-    return this.toSchema(dto);
-  }
 }
-

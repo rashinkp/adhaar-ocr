@@ -1,25 +1,21 @@
 import express from "express";
 import cors from "cors";
-import { connectDB } from "./config/database.config.js";
-import config from "./config/env.config.js";
-import logger from "./config/logger.config.js";
-import { corsOptions, rateLimiter, errorHandler } from "./middleware/security.middleware.js";
-
-// Import clean architecture components
-import { AadhaarRepository } from "./repositories/AadhaarRepository.js";
-import { TesseractOcrProvider } from "./providers/ocr/TesseractOcrProvider.js";
-import { AadhaarService } from "./services/AadhaarService.js";
-import { AadhaarController } from "./controllers/AadhaarController.js";
-import aadhaarRoutes from "./routes/aadhaar.routes.js";
+import { DependencyContainer } from "./config/dependency.injection";
+import { connectDB } from "./config/databaseConfig";
+import logger from "./config/logger.config";
+import { corsOptions, rateLimiter } from "./middleware/securityMiddleware";
+import createAadhaarRoutes from "./routes/aadhaar.routes";
+import { errorHandler } from "./middleware/errorMiddleware";
+import config from "./config/env.config";
 
 class App {
   public app: express.Application;
-  private aadhaarController!: AadhaarController;
+  private dependencyContainer: DependencyContainer;
 
   constructor() {
     this.app = express();
+    this.dependencyContainer = DependencyContainer.getInstance();
     this.initializeDatabase();
-    this.initializeDependencies();
     this.initializeMiddleware();
     this.initializeRoutes();
     this.initializeErrorHandling();
@@ -37,31 +33,10 @@ class App {
     }
   }
 
-  private initializeDependencies(): void {
-    // Initialize repositories
-    const aadhaarRepository = new AadhaarRepository();
-
-    // Initialize providers
-    const tesseractOcrProvider = new TesseractOcrProvider("eng");
-
-    // Initialize services with dependency injection
-    const aadhaarService = new AadhaarService(
-      aadhaarRepository,
-      tesseractOcrProvider
-    );
-
-    // Initialize controllers with dependency injection
-    this.aadhaarController = new AadhaarController(aadhaarService);
-
-    logger.info("Dependencies initialized successfully");
-  }
-
   private initializeMiddleware(): void {
     this.app.use(cors(corsOptions));
-    console.log("CORS Origins:", corsOptions.origin);
     this.app.use(express.json());
     this.app.use(rateLimiter);
-    
     logger.info("Middleware initialized");
   }
 
@@ -72,8 +47,8 @@ class App {
     });
 
     // API routes with dependency injection
-    this.app.use("/api", aadhaarRoutes(this.aadhaarController));
-    
+    const aadhaarController = this.dependencyContainer.getAadhaarController();
+    this.app.use("/api", createAadhaarRoutes(aadhaarController));
     logger.info("Routes initialized");
   }
 
@@ -93,7 +68,6 @@ class App {
   }
 }
 
-// Create and start the application
 const app = new App();
 app.listen();
 
