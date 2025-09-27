@@ -1,10 +1,10 @@
 import type { Request, Response } from "express";
-import { AadhaarService } from "../services/AadhaarService.js";
-import { AadhaarSearchDto } from "../dto/AadhaarDto.js";
+import type { IAadhaarService } from "../services/IAadhaarService.js";
 import logger from "../config/logger.config.js";
+import type { AadhaarSearchDto } from "../dto/AadhaarDto.js";
 
 export class AadhaarController {
-  constructor(private readonly aadhaarService: AadhaarService) {}
+  constructor(private readonly aadhaarService: IAadhaarService) {}
 
   processOcr = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -74,7 +74,7 @@ export class AadhaarController {
 
       const searchDto: AadhaarSearchDto = {
         aadhaarNumber: aadhaarNumber as string,
-        dob: dob as string | undefined,
+        ...(dob && { dob: dob as string }),
       };
 
       const result = await this.aadhaarService.findRecord(searchDto);

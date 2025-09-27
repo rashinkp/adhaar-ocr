@@ -1,13 +1,14 @@
-import { AadhaarRepository } from "../repositories/AadhaarRepository.js";
+import type { IAadhaarRepository } from "../repositories/IAadhaarRepository.js";
 import { AadhaarMapper } from "../mappers/AadhaarMapper.js";
 import { parseAadhaarText } from "../utils/aadhaarParser.js";
 import logger from "../config/logger.config.js";
 import type { IOcrProvider } from "../providers/ocr/IOcrProvider.js";
-import type { AadhaarResponseDto } from "../dto/AadhaarDto.js";
+import type { AadhaarResponseDto, AadhaarSearchDto } from "../dto/AadhaarDto.js";
+import type { IAadhaarService } from "./IAadhaarService.js";
 
-export class AadhaarService {
+export class AadhaarService implements IAadhaarService {
   constructor(
-    private readonly aadhaarRepository: AadhaarRepository,
+    private readonly aadhaarRepository: IAadhaarRepository,
     private readonly ocrProvider: IOcrProvider
   ) {}
 
@@ -17,7 +18,7 @@ export class AadhaarService {
       const [frontText, backText] = await this.ocrProvider.extractTextFromMultiple([frontBuffer, backBuffer]);
 
       // Parse Aadhaar data from extracted text
-      const parsedData = parseAadhaarText(frontText, backText);
+      const parsedData = parseAadhaarText(frontText || '', backText || '');
 
       logger.info("OCR processing completed", {
         hasParsedData: !!parsedData,
@@ -39,7 +40,7 @@ export class AadhaarService {
           success: false,
           message: "Parsed data incomplete; cannot store",
           parsed: parsedData,
-          ocrText: { frontText, backText },
+          ocrText: { frontText: frontText || '', backText: backText || '' },
         };
       }
 
@@ -56,7 +57,7 @@ export class AadhaarService {
       return {
         success: true,
         data: aadhaarDto,
-        ocrText: { frontText, backText },
+        ocrText: { frontText:frontText || '', backText: backText || '' },
         parsed: parsedData,
       };
 
@@ -93,7 +94,7 @@ export class AadhaarService {
         if (searchDob.includes('/')) {
           try {
             const dobDate = new Date(searchDob.split('/').reverse().join('-'));
-            searchDob = dobDate.toISOString().split('T')[0];
+            searchDob = dobDate.toISOString().split('T')[0] || '';
           } catch (error) {
             // Keep original format if parsing fails
             console.warn("Date parsing failed for search:", dob);

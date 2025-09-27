@@ -1,6 +1,6 @@
 import Tesseract from "tesseract.js";
 import sharp from "sharp";
-import { IOcrProvider } from "./IOcrProvider.js";
+import type { IOcrProvider } from "./IOcrProvider.js";
 
 export class TesseractOcrProvider implements IOcrProvider {
   private readonly language: string;

@@ -1,8 +1,9 @@
 import { AadhaarModel } from "../models/Aadhaar.js";
 import type { IAadhaar } from "../models/Aadhaar.js";
+import type { IAadhaarRepository } from "./IAadhaarRepository.js";
 import { parse, format } from "date-fns";
 
-export class AadhaarRepository {
+export class AadhaarRepository implements IAadhaarRepository {
   async findByAadhaarNumber(aadhaarNumber: string): Promise<IAadhaar | null> {
     return await AadhaarModel.findOne({ aadhaarNumber }).sort({ createdAt: -1 });
   }
