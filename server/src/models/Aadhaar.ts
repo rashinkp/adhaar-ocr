@@ -1,10 +1,10 @@
 import { Schema, model, Document } from "mongoose";
 
-interface IAadhaar extends Document {
+export interface IAadhaar extends Document {
   aadhaarNumber: string;
   name: string;
   dob?: string;
-  address: string;
+  address?: string;
   gender?: string;
   createdAt: Date;
 }
@@ -20,7 +20,4 @@ const AadhaarSchema = new Schema<IAadhaar>({
 
 AadhaarSchema.index({ aadhaarNumber: 1, dob: 1 });
 
-const AadhaarModel = model<IAadhaar>("Aadhaar", AadhaarSchema);
-
-export { AadhaarModel };
-export type { IAadhaar };
+export const AadhaarModel = model<IAadhaar>("Aadhaar", AadhaarSchema);
