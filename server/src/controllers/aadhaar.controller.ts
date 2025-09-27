@@ -5,7 +5,7 @@ import type { AadhaarSearchDto } from "../dto/aadhaar.dto";
 
 
 export class AadhaarController {
-  constructor(private readonly aadhaarService: IAadhaarService) {}
+  constructor(private readonly _aadhaarService: IAadhaarService) {}
 
   processOcr = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -43,7 +43,7 @@ export class AadhaarController {
       const backBuffer = files.backFile[0].buffer;
 
       // Process OCR through service
-      const result = await this.aadhaarService.processOcr(
+      const result = await this._aadhaarService.processOcr(
         frontBuffer,
         backBuffer
       );
@@ -85,7 +85,7 @@ export class AadhaarController {
         ...(dob && { dob: dob as string }),
       };
 
-      const result = await this.aadhaarService.findRecord(searchDto);
+      const result = await this._aadhaarService.findRecord(searchDto);
 
       const statusCode = result.success
         ? 200
@@ -117,7 +117,7 @@ export class AadhaarController {
 
   getAllRecords = async (req: Request, res: Response): Promise<void> => {
     try {
-      const result = await this.aadhaarService.getAllRecords();
+      const result = await this._aadhaarService.getAllRecords();
 
       const statusCode = result.success ? 200 : 500;
 
@@ -153,7 +153,7 @@ export class AadhaarController {
         return;
       }
 
-      const result = await this.aadhaarService.deleteRecord(aadhaarNumber);
+      const result = await this._aadhaarService.deleteRecord(aadhaarNumber);
 
       const statusCode = result.success
         ? 200

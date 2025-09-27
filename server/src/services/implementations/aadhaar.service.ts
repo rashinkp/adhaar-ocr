@@ -9,8 +9,8 @@ import type { IAadhaarService } from "../interfaces/aadhaar.service.interface";
 
 export class AadhaarService implements IAadhaarService {
   constructor(
-    private readonly aadhaarRepository: IAadhaarRepository,
-    private readonly ocrProvider: IOcrProvider
+    private readonly _aadhaarRepository: IAadhaarRepository,
+    private readonly _ocrProvider: IOcrProvider
   ) {}
 
   async processOcr(
@@ -20,7 +20,7 @@ export class AadhaarService implements IAadhaarService {
     try {
       // Extract text from both images
       const [frontText, backText] =
-        await this.ocrProvider.extractTextFromMultiple([
+        await this._ocrProvider.extractTextFromMultiple([
           frontBuffer,
           backBuffer,
         ]);
@@ -53,7 +53,7 @@ export class AadhaarService implements IAadhaarService {
       }
 
       // Save to repository
-      const savedRecord = await this.aadhaarRepository.save(parsedData);
+      const savedRecord = await this._aadhaarRepository.save(parsedData);
 
       // Convert to DTO
       const aadhaarDto = AadhaarMapper.toDto(savedRecord);
@@ -108,13 +108,13 @@ export class AadhaarService implements IAadhaarService {
           }
         }
 
-        record = await this.aadhaarRepository.findByAadhaarNumberAndDob(
+        record = await this._aadhaarRepository.findByAadhaarNumberAndDob(
           aadhaarNumber,
           searchDob
         );
       } else {
         record =
-          await this.aadhaarRepository.findByAadhaarNumber(aadhaarNumber);
+          await this._aadhaarRepository.findByAadhaarNumber(aadhaarNumber);
       }
 
       if (!record) {
@@ -156,7 +156,7 @@ export class AadhaarService implements IAadhaarService {
 
   async getAllRecords(): Promise<AadhaarResponseDto> {
     try {
-      const records = await this.aadhaarRepository.findAll();
+      const records = await this._aadhaarRepository.findAll();
       const aadhaarDtos = AadhaarMapper.toDtoArray(records);
 
       return {
@@ -178,7 +178,7 @@ export class AadhaarService implements IAadhaarService {
   async deleteRecord(aadhaarNumber: string): Promise<AadhaarResponseDto> {
     try {
       const deleted =
-        await this.aadhaarRepository.deleteByAadhaarNumber(aadhaarNumber);
+        await this._aadhaarRepository.deleteByAadhaarNumber(aadhaarNumber);
 
       if (!deleted) {
         return {

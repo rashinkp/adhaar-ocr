@@ -4,10 +4,10 @@ import sharp from "sharp";
 
 
 export class TesseractOcrProvider implements IOcrProvider {
-  private readonly language: string;
+  private readonly _language: string;
 
   constructor(language: string = "eng") {
-    this.language = language;
+    this._language = language;
   }
 
   async extractText(buffer: Buffer): Promise<string> {
@@ -15,7 +15,7 @@ export class TesseractOcrProvider implements IOcrProvider {
       // Convert buffer to PNG for better OCR accuracy
       const pngBuffer = await sharp(buffer).toFormat("png").toBuffer();
 
-      const result = await Tesseract.recognize(pngBuffer, this.language);
+      const result = await Tesseract.recognize(pngBuffer, this._language);
       return result.text;
     } catch (error) {
       console.error("OCR extraction failed:", error);
@@ -33,7 +33,7 @@ export class TesseractOcrProvider implements IOcrProvider {
 
       const results = await Promise.all(
         pngBuffers.map((pngBuffer) =>
-          Tesseract.recognize(pngBuffer, this.language)
+          Tesseract.recognize(pngBuffer, this._language)
         )
       );
 
