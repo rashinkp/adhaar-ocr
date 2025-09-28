@@ -48,7 +48,7 @@ class App {
 
     // API routes with dependency injection
     const aadhaarController = this.dependencyContainer.getAadhaarController();
-    this.app.use(Routes.AADHAAR.BASE, createAadhaarRoutes(aadhaarController));
+    this.app.use("/", createAadhaarRoutes(aadhaarController));
     this.dependencyContainer.getLogger().info("Routes initialized");
   }
 
