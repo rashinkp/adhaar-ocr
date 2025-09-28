@@ -1,4 +1,8 @@
 import type { NextFunction, Request, Response } from 'express';
+import { HttpStatus } from '../constants/http.status';
+import { ResponseMessages } from '../constants/response.messages';
+import { ErrorCodes } from '../constants/error.codes';
+import { ResponseHelper } from '../utils/response.helper';
 
 const isValidAadhaar = (aadhaar: string): boolean => {
   return /^\d{12}$/.test(aadhaar) && 
@@ -19,15 +23,18 @@ export const validateSearch = (req: Request, res: Response, next: NextFunction) 
   const { aadhaarNumber, dob } = req.query;
   
   if (!aadhaarNumber || !dob) {
-    return res.status(400).json({ success: false, message: 'Aadhaar number and DOB are required' });
+    const { response } = ResponseHelper.badRequest('Aadhaar number and DOB are required');
+    return res.status(HttpStatus.BAD_REQUEST).json(response);
   }
   
   if (!isValidAadhaar(aadhaarNumber as string)) {
-    return res.status(400).json({ success: false, message: 'Invalid Aadhaar number' });
+    const { response } = ResponseHelper.badRequest('Invalid Aadhaar number');
+    return res.status(HttpStatus.BAD_REQUEST).json(response);
   }
   
   if (!isValidDate(dob as string)) {
-    return res.status(400).json({ success: false, message: 'Invalid date of birth' });
+    const { response } = ResponseHelper.badRequest('Invalid date of birth');
+    return res.status(HttpStatus.BAD_REQUEST).json(response);
   }
   
   next();
@@ -35,13 +42,15 @@ export const validateSearch = (req: Request, res: Response, next: NextFunction) 
 
 export const validateFiles = (req: Request, res: Response, next: NextFunction) => {
   if (!req.files) {
-    return res.status(400).json({ success: false, message: 'No files provided' });
+    const { response } = ResponseHelper.badRequest(ResponseMessages.FILES_REQUIRED);
+    return res.status(HttpStatus.BAD_REQUEST).json(response);
   }
   
   const files = req.files as { [fieldname: string]: Express.Multer.File[] };
   
   if (!files.frontFile || !files.backFile) {
-    return res.status(400).json({ success: false, message: 'Both front and back images are required' });
+    const { response } = ResponseHelper.badRequest(ResponseMessages.FILES_REQUIRED);
+    return res.status(HttpStatus.BAD_REQUEST).json(response);
   }
   
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -50,11 +59,13 @@ export const validateFiles = (req: Request, res: Response, next: NextFunction) =
   for (const [fieldName, fileArray] of Object.entries(files)) {
     for (const file of fileArray) {
       if (!allowedTypes.includes(file.mimetype)) {
-        return res.status(400).json({ success: false, message: 'Invalid file type' });
+        const { response } = ResponseHelper.badRequest(ResponseMessages.INVALID_FILE_FORMAT);
+        return res.status(HttpStatus.BAD_REQUEST).json(response);
       }
       
       if (file.size > maxSize) {
-        return res.status(400).json({ success: false, message: 'File too large' });
+        const { response } = ResponseHelper.badRequest(ResponseMessages.FILE_TOO_LARGE);
+        return res.status(HttpStatus.BAD_REQUEST).json(response);
       }
     }
   }

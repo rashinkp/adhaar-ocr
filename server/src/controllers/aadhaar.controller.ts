@@ -1,11 +1,17 @@
 import type { Request, Response } from "express";
 import type { IAadhaarService } from "../services/interfaces/aadhaar.service.interface";
-import logger from "../config/logger.config";
-import type { AadhaarSearchDto } from "../dto/aadhaar.dto";
-
+import type { ILogger } from "../providers/interfaces/logger.provider.interface";
+import type { AadhaarSearchDto } from "../dto/service.dto";
+import { HttpStatus } from "../constants/http.status";
+import { ResponseMessages } from "../constants/response.messages";
+import { ErrorCodes } from "../constants/error.codes";
+import { ResponseHelper } from "../utils/response.helper";
 
 export class AadhaarController {
-  constructor(private readonly _aadhaarService: IAadhaarService) {}
+  constructor(
+    private readonly _aadhaarService: IAadhaarService,
+    private readonly _logger: ILogger
+  ) {}
 
   processOcr = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -17,10 +23,8 @@ export class AadhaarController {
           .frontFile ||
         !(req.files as { [fieldname: string]: Express.Multer.File[] }).backFile
       ) {
-        res.status(400).json({
-          success: false,
-          message: "Both front and back images are required",
-        });
+        const { response } = ResponseHelper.badRequest(ResponseMessages.FILES_REQUIRED);
+        res.status(HttpStatus.BAD_REQUEST).json(response);
         return;
       }
 
@@ -32,10 +36,8 @@ export class AadhaarController {
         !files.frontFile[0] ||
         !files.backFile[0]
       ) {
-        res.status(400).json({
-          success: false,
-          message: "Both front and back images are required",
-        });
+        const { response } = ResponseHelper.badRequest(ResponseMessages.FILES_REQUIRED);
+        res.status(HttpStatus.BAD_REQUEST).json(response);
         return;
       }
 
@@ -48,31 +50,64 @@ export class AadhaarController {
         backBuffer
       );
 
-      // Set appropriate status code based on result
-      const statusCode = result.success
-        ? 200
-        : result.message?.includes("incomplete")
-          ? 422
-          : 500;
+      // Handle service response
+      if (!result.success) {
+        // Error response
+        let statusCode: number;
+        let message: string;
+        let errorCode: string;
+        
+        switch (result.error.type) {
+          case 'INCOMPLETE_DATA':
+            statusCode = HttpStatus.UNPROCESSABLE_ENTITY;
+            message = ResponseMessages.OCR_INCOMPLETE;
+            errorCode = ErrorCodes.OCR_INCOMPLETE_DATA;
+            break;
+          case 'OCR_ERROR':
+            statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
+            message = ResponseMessages.OCR_FAILED;
+            errorCode = ErrorCodes.OCR_PROCESSING_FAILED;
+            break;
+          default:
+            statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
+            message = ResponseMessages.INTERNAL_ERROR;
+            errorCode = ErrorCodes.INTERNAL_ERROR;
+        }
 
-      logger.info("OCR request processed", {
-        success: result.success,
-        aadhaarNumber: result.data?.aadhaarNumber,
-        ip: req.ip,
-      });
+        const { response } = ResponseHelper.error(message, errorCode, statusCode, result.error.details);
+        
+        this._logger.info("OCR request processed", {
+          success: false,
+          errorType: result.error.type,
+          ip: req.ip,
+        });
 
-      res.status(statusCode).json(result);
+        res.status(statusCode).json(response);
+      } else {
+        // Success response
+        const { response } = ResponseHelper.success(result.data, ResponseMessages.OCR_COMPLETED);
+        
+        this._logger.info("OCR request processed", {
+          success: true,
+          aadhaarNumber: result.data.data.aadhaarNumber,
+          ip: req.ip,
+        });
+
+        res.status(HttpStatus.OK).json(response);
+      }
     } catch (error) {
-      logger.error("OCR controller error", {
+      this._logger.error("OCR controller error", {
         error: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
         ip: req.ip,
       });
 
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
+      const { response } = ResponseHelper.error(
+        ResponseMessages.INTERNAL_ERROR,
+        ErrorCodes.INTERNAL_ERROR,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(response);
     }
   };
 
@@ -87,31 +122,70 @@ export class AadhaarController {
 
       const result = await this._aadhaarService.findRecord(searchDto);
 
-      const statusCode = result.success
-        ? 200
-        : result.message?.includes("not found")
-          ? 404
-          : 400;
+      // Handle service response
+      if (!result.success) {
+        // Error response
+        let statusCode: number;
+        let message: string;
+        let errorCode: string;
+        
+        switch (result.error.type) {
+          case 'VALIDATION_ERROR':
+            statusCode = HttpStatus.BAD_REQUEST;
+            message = result.error.message;
+            errorCode = ErrorCodes.VALIDATION_ERROR;
+            break;
+          case 'NOT_FOUND':
+            statusCode = HttpStatus.NOT_FOUND;
+            message = ResponseMessages.NOT_FOUND;
+            errorCode = ErrorCodes.NOT_FOUND;
+            break;
+          case 'DATABASE_ERROR':
+            statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
+            message = ResponseMessages.INTERNAL_ERROR;
+            errorCode = ErrorCodes.DATABASE_OPERATION_FAILED;
+            break;
+          default:
+            statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
+            message = ResponseMessages.INTERNAL_ERROR;
+            errorCode = ErrorCodes.INTERNAL_ERROR;
+        }
 
-      logger.info("Search request processed", {
-        success: result.success,
-        aadhaarNumber: searchDto.aadhaarNumber,
-        hasDob: !!searchDto.dob,
-        ip: req.ip,
-      });
+        const { response } = ResponseHelper.error(message, errorCode, statusCode, result.error.details);
+        
+        this._logger.info("Search request processed", {
+          success: false,
+          errorType: result.error.type,
+          aadhaarNumber: searchDto.aadhaarNumber,
+          ip: req.ip,
+        });
 
-      res.status(statusCode).json(result);
+        res.status(statusCode).json(response);
+      } else {
+        // Success response
+        const { response } = ResponseHelper.success(result.data, ResponseMessages.RECORD_FOUND);
+        
+        this._logger.info("Search request processed", {
+          success: true,
+          aadhaarNumber: result.data.aadhaarNumber,
+          ip: req.ip,
+        });
+
+        res.status(HttpStatus.OK).json(response);
+      }
     } catch (error) {
-      logger.error("Search controller error", {
+      this._logger.error("Search controller error", {
         error: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
         ip: req.ip,
       });
 
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
+      const { response } = ResponseHelper.error(
+        ResponseMessages.INTERNAL_ERROR,
+        ErrorCodes.INTERNAL_ERROR,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(response);
     }
   };
 
@@ -119,25 +193,48 @@ export class AadhaarController {
     try {
       const result = await this._aadhaarService.getAllRecords();
 
-      const statusCode = result.success ? 200 : 500;
+      // Handle service response
+      if (!result.success) {
+        // Error response
+        const { response } = ResponseHelper.error(
+          ResponseMessages.INTERNAL_ERROR,
+          ErrorCodes.DATABASE_OPERATION_FAILED,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          result.error.details
+        );
+        
+        this._logger.info("Get all records request processed", {
+          success: false,
+          errorType: result.error.type,
+          ip: req.ip,
+        });
 
-      logger.info("Get all records request processed", {
-        success: result.success,
-        ip: req.ip,
-      });
+        res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(response);
+      } else {
+        // Success response
+        const { response } = ResponseHelper.success(result.data, ResponseMessages.RECORDS_FETCHED);
+        
+        this._logger.info("Get all records request processed", {
+          success: true,
+          recordCount: result.data.length,
+          ip: req.ip,
+        });
 
-      res.status(statusCode).json(result);
+        res.status(HttpStatus.OK).json(response);
+      }
     } catch (error) {
-      logger.error("Get all records controller error", {
+      this._logger.error("Get all records controller error", {
         error: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
         ip: req.ip,
       });
 
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
+      const { response } = ResponseHelper.error(
+        ResponseMessages.INTERNAL_ERROR,
+        ErrorCodes.INTERNAL_ERROR,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(response);
     }
   };
 
@@ -146,40 +243,73 @@ export class AadhaarController {
       const { aadhaarNumber } = req.params;
 
       if (!aadhaarNumber) {
-        res.status(400).json({
-          success: false,
-          message: "Aadhaar number is required",
-        });
+        const { response } = ResponseHelper.badRequest(ResponseMessages.AADHAAR_NUMBER_REQUIRED);
+        res.status(HttpStatus.BAD_REQUEST).json(response);
         return;
       }
 
       const result = await this._aadhaarService.deleteRecord(aadhaarNumber);
 
-      const statusCode = result.success
-        ? 200
-        : result.message?.includes("not found")
-          ? 404
-          : 500;
+      // Handle service response
+      if (!result.success) {
+        // Error response
+        let statusCode: number;
+        let message: string;
+        let errorCode: string;
+        
+        switch (result.error.type) {
+          case 'NOT_FOUND':
+            statusCode = HttpStatus.NOT_FOUND;
+            message = ResponseMessages.NOT_FOUND;
+            errorCode = ErrorCodes.NOT_FOUND;
+            break;
+          case 'DATABASE_ERROR':
+            statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
+            message = ResponseMessages.INTERNAL_ERROR;
+            errorCode = ErrorCodes.DATABASE_OPERATION_FAILED;
+            break;
+          default:
+            statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
+            message = ResponseMessages.INTERNAL_ERROR;
+            errorCode = ErrorCodes.INTERNAL_ERROR;
+        }
 
-      logger.info("Delete record request processed", {
-        success: result.success,
-        aadhaarNumber,
-        ip: req.ip,
-      });
+        const { response } = ResponseHelper.error(message, errorCode, statusCode, result.error.details);
+        
+        this._logger.info("Delete record request processed", {
+          success: false,
+          errorType: result.error.type,
+          aadhaarNumber,
+          ip: req.ip,
+        });
 
-      res.status(statusCode).json(result);
+        res.status(statusCode).json(response);
+      } else {
+        // Success response
+        const { response } = ResponseHelper.success(null, ResponseMessages.RECORD_DELETED);
+        
+        this._logger.info("Delete record request processed", {
+          success: true,
+          aadhaarNumber,
+          ip: req.ip,
+        });
+
+        res.status(HttpStatus.OK).json(response);
+      }
     } catch (error) {
-      logger.error("Delete record controller error", {
+      this._logger.error("Delete record controller error", {
         error: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
         aadhaarNumber: req.params.aadhaarNumber,
         ip: req.ip,
       });
 
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
+      const { response } = ResponseHelper.error(
+        ResponseMessages.INTERNAL_ERROR,
+        ErrorCodes.INTERNAL_ERROR,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(response);
     }
   };
 }

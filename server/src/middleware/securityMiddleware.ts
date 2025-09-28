@@ -1,5 +1,9 @@
 import type { Request, Response, NextFunction } from 'express';
-import logger from '../config/logger.config';
+import logger from '../config/logger.config.js';
+import { HttpStatus } from '../constants/http.status';
+import { ResponseMessages } from '../constants/response.messages';
+import { ErrorCodes } from '../constants/error.codes';
+import { ResponseHelper } from '../utils/response.helper';
 
 const rateLimitStore: Map<string, number[]> = new Map();
 
@@ -19,7 +23,12 @@ export const rateLimiter = (req: Request, res: Response, next: NextFunction) => 
   
   if (recentRequests.length >= maxRequests) {
     logger.warn(`Rate limit exceeded for IP: ${req.ip}`);
-    return res.status(429).json({ error: 'Too many requests' });
+    const { response } = ResponseHelper.error(
+      'Too many requests',
+      ErrorCodes.BAD_REQUEST,
+      HttpStatus.BAD_REQUEST  
+    );
+    return res.status(HttpStatus.BAD_REQUEST).json(response);
   }
   
   recentRequests.push(now);
@@ -28,6 +37,11 @@ export const rateLimiter = (req: Request, res: Response, next: NextFunction) => 
 };
 
 export const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
-  logger.error('Error:', err.message);
-  res.status(500).json({ success: false, message: 'Something went wrong' });
+  logger.error('Error:', { message: err.message, stack: err.stack });
+  const { response } = ResponseHelper.error(
+    ResponseMessages.INTERNAL_ERROR,
+    ErrorCodes.INTERNAL_ERROR,
+    HttpStatus.INTERNAL_SERVER_ERROR
+  );
+  res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(response);
 };

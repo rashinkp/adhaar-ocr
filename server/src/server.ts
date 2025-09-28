@@ -2,11 +2,11 @@ import express from "express";
 import cors from "cors";
 import { DependencyContainer } from "./config/dependency.injection";
 import { connectDB } from "./config/databaseConfig";
-import logger from "./config/logger.config";
 import { corsOptions, rateLimiter } from "./middleware/securityMiddleware";
 import createAadhaarRoutes from "./routes/aadhaar.routes";
 import { errorHandler } from "./middleware/errorMiddleware";
 import config from "./config/env.config";
+import { Routes } from "./constants/routes";
 
 class App {
   public app: express.Application;
@@ -24,9 +24,9 @@ class App {
   private async initializeDatabase(): Promise<void> {
     try {
       await connectDB();
-      logger.info("Database connection initialized");
+      this.dependencyContainer.getLogger().info("Database connection initialized");
     } catch (error) {
-      logger.error("Database connection failed", {
+      this.dependencyContainer.getLogger().error("Database connection failed", {
         error: error instanceof Error ? error.message : 'Unknown error'
       });
       process.exit(1);
@@ -37,29 +37,29 @@ class App {
     this.app.use(cors(corsOptions));
     this.app.use(express.json());
     this.app.use(rateLimiter);
-    logger.info("Middleware initialized");
+    this.dependencyContainer.getLogger().info("Middleware initialized");
   }
 
   private initializeRoutes(): void {
     // Health check endpoint
-    this.app.get("/health", (req, res) => {
+    this.app.get(Routes.HEALTH, (req, res) => {
       res.json({ status: "OK" });
     });
 
     // API routes with dependency injection
     const aadhaarController = this.dependencyContainer.getAadhaarController();
-    this.app.use("/api", createAadhaarRoutes(aadhaarController));
-    logger.info("Routes initialized");
+    this.app.use(Routes.AADHAAR.BASE, createAadhaarRoutes(aadhaarController));
+    this.dependencyContainer.getLogger().info("Routes initialized");
   }
 
   private initializeErrorHandling(): void {
     this.app.use(errorHandler);
-    logger.info("Error handling initialized");
+    this.dependencyContainer.getLogger().info("Error handling initialized");
   }
 
   public listen(): void {
     this.app.listen(config.port, () => {
-      logger.info(`Server started successfully`, {
+      this.dependencyContainer.getLogger().info(`Server started successfully`, {
         port: config.port,
         environment: config.isDevelopment ? 'development' : 'production',
         nodeVersion: process.version,

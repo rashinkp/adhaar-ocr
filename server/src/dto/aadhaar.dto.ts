@@ -35,3 +35,4 @@ export interface OcrProcessingDto {
   frontBuffer: Buffer;
   backBuffer: Buffer;
 }
+

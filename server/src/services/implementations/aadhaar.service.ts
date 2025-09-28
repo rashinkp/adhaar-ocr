@@ -1,22 +1,31 @@
-import logger from "../../config/logger.config";
-import type { AadhaarResponseDto, AadhaarSearchDto } from "../../dto/aadhaar.dto";
 import { AadhaarMapper } from "../../mappers/aadhaar.mapper";
+import type { ILogger } from "../../providers/interfaces/logger.provider.interface";
 import type { IOcrProvider } from "../../providers/interfaces/ocr.provider.interface";
 import type { IAadhaarRepository } from "../../repositories/interfaces/aadhaar.repository";
 import { parseAadhaarText } from "../../utils/aadhaar.parser";
+import type { 
+  AadhaarDataDto, 
+  AadhaarProcessDto, 
+  AadhaarSearchDto, 
+  ProcessOcrResult, 
+  FindRecordResult, 
+  GetAllRecordsResult, 
+  DeleteRecordResult 
+} from "../../dto/service.dto";
 import type { IAadhaarService } from "../interfaces/aadhaar.service.interface";
 
 
 export class AadhaarService implements IAadhaarService {
   constructor(
     private readonly _aadhaarRepository: IAadhaarRepository,
-    private readonly _ocrProvider: IOcrProvider
+    private readonly _ocrProvider: IOcrProvider,
+    private readonly _logger: ILogger
   ) {}
 
   async processOcr(
     frontBuffer: Buffer,
     backBuffer: Buffer
-  ): Promise<AadhaarResponseDto> {
+  ): Promise<ProcessOcrResult> {
     try {
       // Extract text from both images
       const [frontText, backText] =
@@ -28,14 +37,14 @@ export class AadhaarService implements IAadhaarService {
       // Parse Aadhaar data from extracted text
       const parsedData = parseAadhaarText(frontText || "", backText || "");
 
-      logger.info("OCR processing completed", {
+      this._logger.info("OCR processing completed", {
         hasParsedData: !!parsedData,
         aadhaarNumber: parsedData.aadhaarNumber,
       });
 
       // Validate required fields
       if (!parsedData.aadhaarNumber || !parsedData.name) {
-        logger.warn("OCR parsing incomplete", {
+        this._logger.warn("OCR parsing incomplete", {
           missingFields: {
             aadhaarNumber: !parsedData.aadhaarNumber,
             name: !parsedData.name,
@@ -46,9 +55,11 @@ export class AadhaarService implements IAadhaarService {
 
         return {
           success: false,
-          message: "Parsed data incomplete; cannot store",
-          parsed: parsedData,
-          ocrText: { frontText: frontText || "", backText: backText || "" },
+          error: {
+            type: 'INCOMPLETE_DATA',
+            message: 'Parsed data incomplete; cannot store',
+            details: { parsedData, ocrText: { frontText: frontText || "", backText: backText || "" } }
+          }
         };
       }
 
@@ -58,38 +69,47 @@ export class AadhaarService implements IAadhaarService {
       // Convert to DTO
       const aadhaarDto = AadhaarMapper.toDto(savedRecord);
 
-      logger.info("Aadhaar record saved successfully", {
+      this._logger.info("Aadhaar record saved successfully", {
         aadhaarNumber: aadhaarDto.aadhaarNumber,
       });
 
       return {
         success: true,
-        data: aadhaarDto,
-        ocrText: { frontText: frontText || "", backText: backText || "" },
-        parsed: parsedData,
+        data: {
+          data: aadhaarDto,
+          ocrText: { frontText: frontText || "", backText: backText || "" },
+          parsed: parsedData,
+        }
       };
     } catch (error) {
-      logger.error("OCR processing failed", {
+      this._logger.error("OCR processing failed", {
         error: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       });
 
       return {
         success: false,
-        message: "OCR processing failed",
+        error: {
+          type: 'OCR_ERROR',
+          message: 'OCR processing failed',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }
       };
     }
   }
 
-  async findRecord(searchDto: AadhaarSearchDto): Promise<AadhaarResponseDto> {
+  async findRecord(searchDto: AadhaarSearchDto): Promise<FindRecordResult> {
     try {
       const { aadhaarNumber, dob } = searchDto;
 
       if (!aadhaarNumber) {
-        logger.warn("Search request missing aadhaarNumber");
+        this._logger.warn("Search request missing aadhaarNumber");
         return {
           success: false,
-          message: "aadhaarNumber is required",
+          error: {
+            type: 'VALIDATION_ERROR',
+            message: 'Aadhaar number is required',
+          }
         };
       }
 
@@ -118,29 +138,32 @@ export class AadhaarService implements IAadhaarService {
       }
 
       if (!record) {
-        logger.info("Aadhaar record not found", {
+        this._logger.info("Aadhaar record not found", {
           aadhaarNumber,
           dob,
         });
 
         return {
           success: false,
-          message: "Record not found",
+          error: {
+            type: 'NOT_FOUND',
+            message: 'Record not found',
+          }
         };
       }
 
       const aadhaarDto = AadhaarMapper.toDto(record);
 
-      logger.info("Aadhaar record found successfully", {
+      this._logger.info("Aadhaar record found successfully", {
         aadhaarNumber: aadhaarDto.aadhaarNumber,
       });
 
       return {
         success: true,
-        data: aadhaarDto,
+        data: aadhaarDto
       };
     } catch (error) {
-      logger.error("Error finding Aadhaar record", {
+      this._logger.error("Error finding Aadhaar record", {
         error: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
         aadhaarNumber: searchDto.aadhaarNumber,
@@ -149,33 +172,41 @@ export class AadhaarService implements IAadhaarService {
 
       return {
         success: false,
-        message: "Error finding Aadhaar record",
+        error: {
+          type: 'DATABASE_ERROR',
+          message: 'Error finding Aadhaar record',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }
       };
     }
   }
 
-  async getAllRecords(): Promise<AadhaarResponseDto> {
+  async getAllRecords(): Promise<GetAllRecordsResult> {
     try {
       const records = await this._aadhaarRepository.findAll();
       const aadhaarDtos = AadhaarMapper.toDtoArray(records);
 
       return {
         success: true,
-        data: aadhaarDtos as any, // Type assertion for array response
+        data: aadhaarDtos
       };
     } catch (error) {
-      logger.error("Error fetching all records", {
+      this._logger.error("Error fetching all records", {
         error: error instanceof Error ? error.message : "Unknown error",
       });
 
       return {
         success: false,
-        message: "Error fetching records",
+        error: {
+          type: 'DATABASE_ERROR',
+          message: 'Error fetching records',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }
       };
     }
   }
 
-  async deleteRecord(aadhaarNumber: string): Promise<AadhaarResponseDto> {
+  async deleteRecord(aadhaarNumber: string): Promise<DeleteRecordResult> {
     try {
       const deleted =
         await this._aadhaarRepository.deleteByAadhaarNumber(aadhaarNumber);
@@ -183,27 +214,34 @@ export class AadhaarService implements IAadhaarService {
       if (!deleted) {
         return {
           success: false,
-          message: "Record not found",
+          error: {
+            type: 'NOT_FOUND',
+            message: 'Record not found',
+          }
         };
       }
 
-      logger.info("Aadhaar record deleted successfully", {
+      this._logger.info("Aadhaar record deleted successfully", {
         aadhaarNumber,
       });
 
       return {
         success: true,
-        message: "Record deleted successfully",
+        data: true
       };
     } catch (error) {
-      logger.error("Error deleting Aadhaar record", {
+      this._logger.error("Error deleting Aadhaar record", {
         error: error instanceof Error ? error.message : "Unknown error",
         aadhaarNumber,
       });
 
       return {
         success: false,
-        message: "Error deleting record",
+        error: {
+          type: 'DATABASE_ERROR',
+          message: 'Error deleting record',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }
       };
     }
   }
