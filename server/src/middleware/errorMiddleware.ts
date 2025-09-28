@@ -1,10 +1,10 @@
-import type { NextFunction, Request, Response } from "express";
+import type {  Request, Response } from "express";
 import { HttpStatus } from "../constants/http.status";
 import { ResponseMessages } from "../constants/response.messages";
 import { ErrorCodes } from "../constants/error.codes";
 import { ResponseHelper } from "../utils/response.helper";
 
-export const errorHandler = function (err: Error, req: Request, res: Response, next: NextFunction) {
+export const errorHandler = function (err: Error, req: Request, res: Response) {
   console.error(err.stack);
   const { response } = ResponseHelper.error(
     ResponseMessages.INTERNAL_ERROR,

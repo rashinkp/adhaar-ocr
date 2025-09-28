@@ -1,5 +1,4 @@
 import type { 
-  AadhaarDataDto, 
   AadhaarSearchDto, 
   ProcessOcrResult, 
   FindRecordResult, 

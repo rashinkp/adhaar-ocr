@@ -4,8 +4,6 @@ import type { IOcrProvider } from "../../providers/interfaces/ocr.provider.inter
 import type { IAadhaarRepository } from "../../repositories/interfaces/aadhaar.repository";
 import { parseAadhaarText } from "../../utils/aadhaar.parser";
 import type { 
-  AadhaarDataDto, 
-  AadhaarProcessDto, 
   AadhaarSearchDto, 
   ProcessOcrResult, 
   FindRecordResult, 
@@ -122,8 +120,7 @@ export class AadhaarService implements IAadhaarService {
           try {
             const dobDate = new Date(searchDob.split("/").reverse().join("-"));
             searchDob = dobDate.toISOString().split("T")[0] || "";
-          } catch (error) {
-            // Keep original format if parsing fails
+          } catch {
             console.warn("Date parsing failed for search:", dob);
           }
         }

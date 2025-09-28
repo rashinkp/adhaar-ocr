@@ -26,19 +26,19 @@ export class WinstonLoggerProvider implements ILogger {
     }
   }
 
-  info(message: string, meta?: Record<string, any>): void {
+  info(message: string, meta?: Record<string, unknown>): void {
     this.logger.info(message, meta);
   }
 
-  warn(message: string, meta?: Record<string, any>): void {
+  warn(message: string, meta?: Record<string, unknown>): void {
     this.logger.warn(message, meta);
   }
 
-  error(message: string, meta?: Record<string, any>): void {
+  error(message: string, meta?: Record<string, unknown>): void {
     this.logger.error(message, meta);
   }
 
-  debug(message: string, meta?: Record<string, any>): void {
+  debug(message: string, meta?: Record<string, unknown>): void {
     this.logger.debug(message, meta);
   }
 }
