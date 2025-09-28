@@ -36,7 +36,7 @@ export const rateLimiter = (req: Request, res: Response, next: NextFunction) => 
   next();
 };
 
-export const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
+export const errorHandler = (err: Error, req: Request, res: Response) => {
   logger.error('Error:', { message: err.message, stack: err.stack });
   const { response } = ResponseHelper.error(
     ResponseMessages.INTERNAL_ERROR,

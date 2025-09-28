@@ -1,15 +1,13 @@
 import { HttpStatus } from "../constants/http.status.js";
 import { ResponseMessages } from "../constants/response.messages.js";
 import { ErrorCodes } from "../constants/error.codes.js";
-import type { AadhaarDto } from "../dto/aadhaar.dto.js";
-
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data?: T;
   error?: {
     code: string;
-    details?: any;
+    details?: unknown;
   };
   meta?: {
     timestamp: string;
@@ -23,16 +21,21 @@ export class ResponseHelper {
     message: string = ResponseMessages.SUCCESS,
     statusCode: number = HttpStatus.OK
   ): { statusCode: number; response: ApiResponse<T> } {
+    const response: ApiResponse<T> = {
+      success: true,
+      message,
+      meta: {
+        timestamp: new Date().toISOString(),
+      },
+    };
+    
+    if (data !== undefined) {
+      response.data = data;
+    }
+    
     return {
       statusCode,
-      response: {
-        success: true,
-        message,
-        data,
-        meta: {
-          timestamp: new Date().toISOString(),
-        },
-      },
+      response,
     };
   }
 
@@ -40,7 +43,7 @@ export class ResponseHelper {
     message: string = ResponseMessages.INTERNAL_ERROR,
     errorCode: string = ErrorCodes.INTERNAL_ERROR,
     statusCode: number = HttpStatus.INTERNAL_SERVER_ERROR,
-    details?: any
+    details?: unknown
   ): { statusCode: number; response: ApiResponse } {
     return {
       statusCode,
@@ -60,7 +63,7 @@ export class ResponseHelper {
 
   static validationError(
     message: string = ResponseMessages.VALIDATION_ERROR,
-    details?: any
+    details?: unknown
   ): { statusCode: number; response: ApiResponse } {
     return this.error(
       message,
@@ -82,7 +85,7 @@ export class ResponseHelper {
 
   static badRequest(
     message: string = ResponseMessages.INVALID_DATA,
-    details?: any
+    details?: unknown
   ): { statusCode: number; response: ApiResponse } {
     return this.error(
       message,
@@ -94,7 +97,7 @@ export class ResponseHelper {
 
   static unprocessableEntity(
     message: string = ResponseMessages.OCR_INCOMPLETE,
-    details?: any
+    details?: unknown
   ): { statusCode: number; response: ApiResponse } {
     return this.error(
       message,

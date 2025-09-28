@@ -103,7 +103,7 @@ const extractDob = (text: string): string | undefined => {
     const [day, month, year] = parts as [string, string, string];
     let dd = day;
     let mm = month;
-    let yyyy = year;
+    const  yyyy = year;
     if (dd.length === 1) dd = `0${dd}`;
     if (mm.length === 1) mm = `0${mm}`;
     if (yyyy.length === 2) {
@@ -115,10 +115,12 @@ const extractDob = (text: string): string | undefined => {
   const normalized = candidate ? normalizeDate(candidate) : undefined;
   if (normalized) return normalized;
 
+  // eslint-disable-next-line no-useless-escape
   const dobRegex = /(DOB\s*[:\-]?\s*)(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/i;
   const m1 = text.match(dobRegex);
   if (m1 && m1[2]) return normalizeDate(m1[2]);
 
+  // eslint-disable-next-line no-useless-escape
   const yobRegex = /(YOB|Year\s*of\s*Birth)\s*[:\-]?\s*(\d{4})/i;
   const m2 = text.match(yobRegex);
   if (m2 && m2[2]) return `01/01/${m2[2]}`;
@@ -161,7 +163,7 @@ const extractAddress = (text: string): string | undefined => {
   const normalizedText = normalizePunctuation(normalize(text));
   const lines = normalizedText.split("\n").map((l) => l.trim()).filter(Boolean);
 
-  let labelIndex = lines.findIndex((l) => /address\s*:?$/i.test(l) || /address\s*:/i.test(l));
+  const labelIndex = lines.findIndex((l) => /address\s*:?$/i.test(l) || /address\s*:/i.test(l));
   if (labelIndex !== -1) {
     const block: string[] = [];
     for (let i = labelIndex + 1; i < Math.min(lines.length, labelIndex + 8); i++) {

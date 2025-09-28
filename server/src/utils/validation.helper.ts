@@ -97,6 +97,7 @@ export class ValidationHelper {
       };
     }
     
+    // eslint-disable-next-line no-useless-escape
     const dateRegex = /^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/;
     const match = dob.match(dateRegex);
     

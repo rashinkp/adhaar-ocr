@@ -1,7 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { HttpStatus } from '../constants/http.status';
 import { ResponseMessages } from '../constants/response.messages';
-import { ErrorCodes } from '../constants/error.codes';
 import { ResponseHelper } from '../utils/response.helper';
 
 const isValidAadhaar = (aadhaar: string): boolean => {
@@ -56,7 +55,7 @@ export const validateFiles = (req: Request, res: Response, next: NextFunction) =
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
   const maxSize = 5 * 1024 * 1024; // 5MB
   
-  for (const [fieldName, fileArray] of Object.entries(files)) {
+  for (const [, fileArray] of Object.entries(files)) {
     for (const file of fileArray) {
       if (!allowedTypes.includes(file.mimetype)) {
         const { response } = ResponseHelper.badRequest(ResponseMessages.INVALID_FILE_FORMAT);

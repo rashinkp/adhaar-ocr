@@ -33,7 +33,7 @@ export class AadhaarRepository implements IAadhaarRepository {
               record = dbRecord;
               break;
             }
-          } catch (error) {
+          } catch {
             continue;
           }
         }
@@ -50,12 +50,12 @@ export class AadhaarRepository implements IAadhaarRepository {
     }
 
     // Format date if provided
-    let formattedData = { ...aadhaarData };
+    const formattedData = { ...aadhaarData };
     if (aadhaarData.dob) {
       try {
         const dobDate = parse(aadhaarData.dob, "dd/MM/yyyy", new Date());
         formattedData.dob = format(dobDate, "yyyy-MM-dd");
-      } catch (error) {
+      } catch {
         // Keep original format if parsing fails
         console.warn(
           "Date parsing failed, keeping original format:",

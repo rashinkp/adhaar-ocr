@@ -38,7 +38,7 @@ export type ServiceResult<T> = {
   error: {
     type: 'VALIDATION_ERROR' | 'NOT_FOUND' | 'DATABASE_ERROR' | 'OCR_ERROR' | 'INCOMPLETE_DATA';
     message: string;
-    details?: any;
+    details?: unknown;
   };
 };
 
@@ -52,5 +52,5 @@ export type DeleteRecordResult = ServiceResult<boolean>;
 export interface AadhaarProcessingError {
   type: 'OCR_FAILED' | 'VALIDATION_FAILED' | 'DATABASE_ERROR' | 'INCOMPLETE_DATA';
   message: string;
-  details?: any;
+  details?: unknown;
 }
