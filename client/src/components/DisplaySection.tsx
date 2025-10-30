@@ -9,7 +9,7 @@ import type { AadhaarData } from "@/types/adhaar";
 
 
 
-const UserDetailsDisplay = ({ data, isProcessing, response, onRetry, onDismiss, onFetchByAadhaarDob }: UserDetailsDisplayProps) => {
+const UserDetailsDisplay = ({ data, isProcessing, response, onRetry, onDismiss, onFetchByAadhaarDob, onClear }: UserDetailsDisplayProps & { onClear?: () => void }) => {
   // Show loading state (skeleton)
   if (isProcessing) {
     return <UserDetailsSkeleton />;
@@ -59,7 +59,7 @@ const UserDetailsDisplay = ({ data, isProcessing, response, onRetry, onDismiss, 
 
   // On success, just show data card; toast is handled in submit/upload flows
   if (response && response.success) {
-    return data ? <UserDetailsCard data={data} onFetch={onFetchByAadhaarDob} /> : null;
+    return data ? <UserDetailsCard data={data} onFetch={onFetchByAadhaarDob} onClear={onClear} /> : null;
   }
 
   // Show empty state
@@ -81,13 +81,20 @@ const UserDetailsDisplay = ({ data, isProcessing, response, onRetry, onDismiss, 
   }
 
   // Show data without validation info (fallback)
-  return <UserDetailsCard data={data} onFetch={onFetchByAadhaarDob} />;
+  return <UserDetailsCard data={data} onFetch={onFetchByAadhaarDob} onClear={onClear} />;
 };
 
-const UserDetailsCard = ({ data, onFetch }: { data: AadhaarData; onFetch?: (aadhaar: string, dob: string) => void }) => {
-
+const UserDetailsCard = ({ data, onFetch, onClear }: { data: AadhaarData; onFetch?: (aadhaar: string, dob: string) => void; onClear?: () => void }) => {
+  const handleCopy = () => {
+    const text = `Name: ${data.name}\nGender: ${data.gender || ''}\nDOB: ${data.dob || ''}\nAadhaar No: ${data.aadhaarNumber}\nAddress: ${data.address || ''}`;
+    navigator.clipboard.writeText(text);
+  };
   return (
     <Card className="max-w-md mx-auto p-4 space-y-4 shadow-none border-none">
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={handleCopy} className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">Copy</button>
+        {onClear && <button type="button" onClick={onClear} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">Clear</button>}
+      </div>
       <CardHeader>
         <CardTitle className="font-bold flex items-center space-x-2">
           <CheckCircle className="w-5 h-5 text-green-600" />
