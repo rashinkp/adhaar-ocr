@@ -99,6 +99,11 @@ const handleDismiss = () => {
   setResponse(null);
 };
 
+const handleClear = () => {
+  setAadhaarData(null);
+  setResponse(null);
+};
+
 const handleFetchByAadhaarDob = async (aadhaar: string, dobStr: string) => {
   if (!aadhaar || !dobStr) return;
   setIsProcessing(true);
@@ -174,6 +179,7 @@ const handleFetchByAadhaarDob = async (aadhaar: string, dobStr: string) => {
             onRetry={handleRetry}
             onDismiss={handleDismiss}
             onFetchByAadhaarDob={handleFetchByAadhaarDob}
+            onClear={handleClear}
           />
         </div>
 
